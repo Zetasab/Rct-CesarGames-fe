@@ -1,0 +1,61 @@
+.ladda-button-custom {
+    transition: background-color 0.3s ease, border-color 0.3s ease;
+    display: inline-flex !important; /* LaddaButton usually renders as button, make sure it flexes children */
+    align-items: center;
+    justify-content: center;
+}
+
+.ladda-button-custom.p-button {
+    /* Ensure PrimeNG styles are preserved but override conflicting Ladda styles if necessary */
+    position: relative;
+    overflow: hidden;
+}
+
+/* Success State - Green */
+.ladda-button-success {
+    background-color: var(--green-500, #22c55e) !important;
+    border-color: var(--green-500, #22c55e) !important;
+    color: #ffffff !important;
+}
+
+.ladda-button-success:hover {
+    background-color: var(--green-600, #16a34a) !important;
+    border-color: var(--green-600, #16a34a) !important;
+}
+
+/* Error State - Red */
+.ladda-button-error {
+    background-color: var(--red-500, #ef4444) !important;
+    border-color: var(--red-500, #ef4444) !important;
+    color: #ffffff !important;
+}
+
+.ladda-button-error:hover {
+    background-color: var(--red-600, #dc2626) !important;
+    border-color: var(--red-600, #dc2626) !important;
+}
+
+/* Icon Animation */
+.status-icon {
+    font-size: 1.2rem;
+    margin-right: 0.5rem;
+}
+
+/* Container Animation */
+.fade-in-scale {
+    animation: scaleIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@keyframes scaleIn {
+    0% {
+        transform: scale(0.5);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}

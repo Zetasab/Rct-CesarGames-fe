@@ -1,0 +1,52 @@
+'use client';
+
+import React, { useEffect } from 'react';
+import { AuthProvider } from '@/context/AuthContext';
+import AuthGuard from './AuthGuard';
+import { PrimeReactProvider } from 'primereact/api';
+import Navbar from '@/shared/navbar/Navbar'; // Import Navbar
+import { usePathname } from 'next/navigation';
+
+export default function ClientProviders({ children }: { children: React.ReactNode }) {
+    const pathname = usePathname();
+    const isLoginPage = pathname === '/login';
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        // Keep browser from restoring previous scroll position on route changes.
+        if ('scrollRestoration' in window.history) {
+            window.history.scrollRestoration = 'manual';
+        }
+
+        const scrollTop = () => {
+            window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
+        };
+
+        scrollTop();
+
+        // Mobile browsers can apply a late layout shift; retry shortly after paint.
+        const rafId = window.requestAnimationFrame(scrollTop);
+        const timeoutId = window.setTimeout(scrollTop, 80);
+
+        return () => {
+            window.cancelAnimationFrame(rafId);
+            window.clearTimeout(timeoutId);
+        };
+    }, [pathname]);
+
+    return (
+        <PrimeReactProvider value={{ ripple: true }}>
+            <AuthProvider>
+                <AuthGuard>
+                    {!isLoginPage && <Navbar />}
+                    {children}
+                </AuthGuard>
+            </AuthProvider>
+        </PrimeReactProvider>
+    );
+}
