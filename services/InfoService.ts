@@ -8,10 +8,6 @@ class InfoService extends BaseService {
     async getInfo(): Promise<string> {
         return this.get<string>('/GetInfo');
     }
-
-    async getGameApi(): Promise<string> {
-        return this.get<string>('/getGameApi');
-    }
    
 }
 

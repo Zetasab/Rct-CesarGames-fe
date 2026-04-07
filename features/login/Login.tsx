@@ -11,8 +11,6 @@ import Image from 'next/image';
 import './login.css';
 
 import { authService } from '@/services/AuthService';
-import { infoService } from '@/services/InfoService';
-import { gameService } from '@/services/GameService';
 import { LoginRequest } from '@/models/LoginRequest';
 
 

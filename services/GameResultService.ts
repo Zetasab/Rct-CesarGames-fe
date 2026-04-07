@@ -16,10 +16,8 @@ class GameResultService extends BaseService {
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('user');
                 localStorage.removeItem('token');
-                localStorage.removeItem('gameApiKey');
                 sessionStorage.removeItem('user');
                 sessionStorage.removeItem('token');
-                sessionStorage.removeItem('gameApiKey');
                 window.location.href = '/login';
             }
         }
