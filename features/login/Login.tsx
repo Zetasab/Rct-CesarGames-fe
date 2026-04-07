@@ -20,19 +20,19 @@ export default function Login() {
     const { login } = useAuth();
     const [rememberedCredentials] = useState(() => {
         if (typeof window === 'undefined') {
-            return { username: '', password: '', rememberMe: false };
+            return { email: '', password: '', rememberMe: false };
         }
 
-        const rememberedUser = localStorage.getItem('rememberedUser') || '';
+        const rememberedEmail = localStorage.getItem('rememberedEmail') || localStorage.getItem('rememberedUser') || '';
         const rememberedPassword = localStorage.getItem('rememberedPassword') || '';
 
         return {
-            username: rememberedUser,
+            email: rememberedEmail,
             password: rememberedPassword,
-            rememberMe: Boolean(rememberedUser),
+            rememberMe: Boolean(rememberedEmail),
         };
     });
-    const [username, setUsername] = useState(rememberedCredentials.username);
+    const [email, setEmail] = useState(rememberedCredentials.email);
     const [password, setPassword] = useState(rememberedCredentials.password);
     const [rememberMe, setRememberMe] = useState(rememberedCredentials.rememberMe);
     const [error, setError] = useState('');
@@ -46,18 +46,19 @@ export default function Login() {
         setError('');
 
         if (rememberMe) {
-            localStorage.setItem('rememberedUser', username);
+            localStorage.setItem('rememberedEmail', email);
             localStorage.setItem('rememberedPassword', password);
         } else {
+            localStorage.removeItem('rememberedEmail');
             localStorage.removeItem('rememberedUser');
             localStorage.removeItem('rememberedPassword');
         }
 
 
-        if (username && password) {
+        if (email && password) {
             try {
                 const loginRequest: LoginRequest = {
-                    UserName: username,
+                    Email: email,
                     Password: password
                 };
                 const user = await authService.login(loginRequest);
@@ -68,17 +69,6 @@ export default function Login() {
                     sessionStorage.removeItem('token');
                 }
 
-                const gameApiResponse = await infoService.getGameApi();
-                const gameApiKey = typeof gameApiResponse === 'string'
-                    ? gameApiResponse
-                    : (
-                        (gameApiResponse as unknown as { apiKey?: string; key?: string; value?: string })?.apiKey
-                        || (gameApiResponse as unknown as { apiKey?: string; key?: string; value?: string })?.key
-                        || (gameApiResponse as unknown as { apiKey?: string; key?: string; value?: string })?.value
-                        || ''
-                    );
-
-                gameService.setApiKey(gameApiKey || '');
 
                 setLoading(false);
                 setStatus('success');
@@ -117,13 +107,14 @@ export default function Login() {
                             <div className="flex flex-col gap-2">
                                 <FloatLabel>
                                     <InputText
-                                        id="username"
+                                        id="email"
+                                        type="email"
                                         required
-                                        value={username}
-                                        onChange={(e) => { setUsername(e.target.value); setError(''); }}
+                                        value={email}
+                                        onChange={(e) => { setEmail(e.target.value); setError(''); }}
                                         className={`w-full input-bg-transparent bg-transparent ${error ? 'p-invalid' : ''}`}
                                     />
-                                    <label htmlFor="username">Usuario</label>
+                                    <label htmlFor="email">Email</label>
                                 </FloatLabel>
 
                             </div>
@@ -149,7 +140,7 @@ export default function Login() {
                                     checked={rememberMe}
                                     onChange={e => setRememberMe(e.checked || false)}
                                 />
-                                <label htmlFor="rememberMe" className="ml-2 text-white">Recordar usuario</label>
+                                <label htmlFor="rememberMe" className="ml-2 text-white">Recordar email</label>
                             </div>
                             <div className='mt-5'>
                                 <CustomLaddaButton

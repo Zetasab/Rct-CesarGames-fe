@@ -4,11 +4,11 @@ import { User } from '@/models/User';
 
 class AuthService extends BaseService {
     constructor() {
-        super('user'); // Appends '/user' to base URL
+        super('api/games'); // Appends '/user' to base URL
     }
 
     async login(credentials: LoginRequest): Promise<User> {
-        return this.post<User>('/login?proyect=gms', credentials);
+        return this.post<User>('/login', credentials);
     }
 
     async logout(): Promise<void> {
