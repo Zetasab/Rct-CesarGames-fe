@@ -306,44 +306,50 @@ export default function Search() {
                                 className="md:col-span-6 bg-transparent border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
                             />
 
-                            <MultiSelect
-                                value={selectedGenres}
-                                onChange={(event) => setSelectedGenres((event.value as string[]) ?? [])}
-                                options={genreOptions}
-                                optionLabel="label"
-                                optionValue="value"
-                                display="chip"
-                                filter
-                                placeholder="Géneros"
-                                className="md:col-span-2"
-                                panelClassName="bg-[#151515] text-white"
-                            />
+                            <div id="genres-filter" className="md:col-span-2 scroll-mt-28">
+                                <MultiSelect
+                                    value={selectedGenres}
+                                    onChange={(event) => setSelectedGenres((event.value as string[]) ?? [])}
+                                    options={genreOptions}
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    display="chip"
+                                    filter
+                                    placeholder="Géneros"
+                                    className="w-full"
+                                    panelClassName="bg-[#151515] text-white"
+                                />
+                            </div>
 
-                            <MultiSelect
-                                value={selectedPlatforms}
-                                onChange={(event) => setSelectedPlatforms((event.value as string[]) ?? [])}
-                                options={platformOptions}
-                                optionLabel="label"
-                                optionValue="value"
-                                display="chip"
-                                filter
-                                placeholder="Plataformas"
-                                className="md:col-span-2"
-                                panelClassName="bg-[#151515] text-white"
-                            />
+                            <div id="platforms-filter" className="md:col-span-2 scroll-mt-28">
+                                <MultiSelect
+                                    value={selectedPlatforms}
+                                    onChange={(event) => setSelectedPlatforms((event.value as string[]) ?? [])}
+                                    options={platformOptions}
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    display="chip"
+                                    filter
+                                    placeholder="Plataformas"
+                                    className="w-full"
+                                    panelClassName="bg-[#151515] text-white"
+                                />
+                            </div>
 
-                            <MultiSelect
-                                value={selectedStores}
-                                onChange={(event) => setSelectedStores((event.value as string[]) ?? [])}
-                                options={storeOptions}
-                                optionLabel="label"
-                                optionValue="value"
-                                display="chip"
-                                filter
-                                placeholder="Stores"
-                                className="md:col-span-2"
-                                panelClassName="bg-[#151515] text-white"
-                            />
+                            <div id="stores-filter" className="md:col-span-2 scroll-mt-28">
+                                <MultiSelect
+                                    value={selectedStores}
+                                    onChange={(event) => setSelectedStores((event.value as string[]) ?? [])}
+                                    options={storeOptions}
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    display="chip"
+                                    filter
+                                    placeholder="Stores"
+                                    className="w-full"
+                                    panelClassName="bg-[#151515] text-white"
+                                />
+                            </div>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">

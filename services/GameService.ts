@@ -23,6 +23,44 @@ export interface SearchGamesParams {
     pageSize?: number;
 }
 
+export interface GenrePreviewGame {
+    id: number;
+    slug: string;
+    name: string;
+    added: number;
+}
+
+export interface GenreListItem {
+    id: number;
+    name: string;
+    slug: string;
+    games_count: number;
+    image_background: string;
+    games: GenrePreviewGame[];
+}
+
+export interface StoreListItem {
+    id: number;
+    name: string;
+    domain: string;
+    slug: string;
+    games_count: number;
+    image_background: string;
+    games: GenrePreviewGame[];
+}
+
+export interface PlatformListItem {
+    id: number;
+    name: string;
+    slug: string;
+    games_count: number;
+    image_background: string;
+    image: string | null;
+    year_start: number | null;
+    year_end: number | null;
+    games: GenrePreviewGame[];
+}
+
 class GameService extends BaseService {
     constructor() {
         super('api/games');
@@ -69,6 +107,18 @@ class GameService extends BaseService {
 
     async getGamesByGenre(genre: string, pageSize: number = 20): Promise<{ results: Game[] }> {
         return this.get<{ results: Game[] }>(`?genres=${encodeURIComponent(genre)}&ordering=-added&page_size=${pageSize}`);
+    }
+
+    async getGenres(): Promise<GenreListItem[]> {
+        return this.get<GenreListItem[]>('/genres');
+    }
+
+    async getStores(): Promise<StoreListItem[]> {
+        return this.get<StoreListItem[]>('/stores');
+    }
+
+    async getPlatforms(): Promise<PlatformListItem[]> {
+        return this.get<PlatformListItem[]>('/platforms');
     }
 
     async getTrendingGames(pageSize: number = 20): Promise<{ results: Game[] }> {
@@ -120,7 +170,7 @@ class GameService extends BaseService {
         }
 
         if (typeof window !== 'undefined') {
-            console.log('[GameService.searchGames] API query:', `${getBaseUrl()}/api/games/search?${query.toString()}`);
+            console.log('[GameService.searchGames] API query:', `${getBaseUrl()}api/games/search?${query.toString()}`);
         }
 
         return this.get<RawgPaginatedResponse<Game>>(`/search?${query.toString()}`);

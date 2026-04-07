@@ -112,10 +112,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const logout = () => {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
-        localStorage.removeItem('gameApiKey');
         sessionStorage.removeItem('user');
         sessionStorage.removeItem('token');
-        sessionStorage.removeItem('gameApiKey');
         setUser(null);
         setIsAuthenticated(false);
         router.push('/login');

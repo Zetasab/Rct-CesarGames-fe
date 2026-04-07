@@ -25,6 +25,10 @@ export default function Navbar() {
             return pathname === '/';
         }
 
+        if (href === '/search') {
+            return pathname.startsWith('/search');
+        }
+
         return pathname === href || pathname.startsWith(`${href}/`);
     };
 
@@ -111,16 +115,43 @@ export default function Navbar() {
                             <span>Inicio</span>
                             <span className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-300 ease-out shadow-[0_0_12px_rgba(255,66,0,0.6)] ${isRouteActive('/') ? 'w-full opacity-100' : 'w-0 opacity-0 group-hover:w-full group-hover:opacity-100'}`}></span>
                         </Link>
-                        <Link
-                           
-                            href="/search"
-                            style={{ fontFamily: 'var(--font-press-start-2p)' }}
-                            className={`relative transition-colors font-bold text-[10px] uppercase tracking-wider group py-2 px-3 rounded-md border flex items-center gap-2 ${isRouteActive('/search') ? 'text-white bg-primary-500/25 border-primary-500/60 shadow-[0_0_14px_rgba(255,66,0,0.45)]' : 'text-gray-300 hover:text-white border-transparent hover:bg-white/5'}`}
-                        >
-                            <i className={`pi pi-search text-white text-lg transition-all duration-300 group-hover:scale-125 group-hover:rotate-12 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] ${isRouteActive('/search') ? 'scale-125 text-primary-400 drop-shadow-[0_0_12px_rgba(255,66,0,0.9)]' : ''}`}></i>
-                            <span>Buscar</span>
-                            <span className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-300 ease-out shadow-[0_0_12px_rgba(255,66,0,0.6)] ${isRouteActive('/search') ? 'w-full opacity-100' : 'w-0 opacity-0 group-hover:w-full group-hover:opacity-100'}`}></span>
-                        </Link>
+                        <div className="relative group/menu">
+                            <Link
+                                href="/search"
+                                style={{ fontFamily: 'var(--font-press-start-2p)' }}
+                                className={`relative transition-colors font-bold text-[10px] uppercase tracking-wider group py-2 px-3 rounded-md border flex items-center gap-2 ${isRouteActive('/search') ? 'text-white bg-primary-500/25 border-primary-500/60 shadow-[0_0_14px_rgba(255,66,0,0.45)]' : 'text-gray-300 hover:text-white border-transparent hover:bg-white/5'}`}
+                            >
+                                <i className={`pi pi-search text-white text-lg transition-all duration-300 group-hover:scale-125 group-hover:rotate-12 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] ${isRouteActive('/search') ? 'scale-125 text-primary-400 drop-shadow-[0_0_12px_rgba(255,66,0,0.9)]' : ''}`}></i>
+                                <span>Buscar</span>
+                                <span className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-300 ease-out shadow-[0_0_12px_rgba(255,66,0,0.6)] ${isRouteActive('/search') ? 'w-full opacity-100' : 'w-0 opacity-0 group-hover:w-full group-hover:opacity-100'}`}></span>
+                            </Link>
+
+                            <div className="invisible opacity-0 translate-y-1 pointer-events-none group-hover/menu:visible group-hover/menu:opacity-100 group-hover/menu:translate-y-0 group-focus-within/menu:visible group-focus-within/menu:opacity-100 group-focus-within/menu:translate-y-0 group-hover/menu:pointer-events-auto group-focus-within/menu:pointer-events-auto transition-all duration-200 absolute left-0 top-full pt-2 z-[80] min-w-52">
+                                <div className="rounded-xl border border-white/10 bg-black/90 backdrop-blur-md p-2 shadow-[0_12px_30px_rgba(0,0,0,0.45)]">
+                                    <Link
+                                        href="/searchGenres"
+                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-200 hover:text-white hover:bg-white/10 transition-colors"
+                                    >
+                                        <i className="pi pi-tags text-[10px]" />
+                                        <span>Generos</span>
+                                    </Link>
+                                    <Link
+                                        href="/searchPlatforms"
+                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-200 hover:text-white hover:bg-white/10 transition-colors"
+                                    >
+                                        <i className="pi pi-desktop text-[10px]" />
+                                        <span>Plataformas</span>
+                                    </Link>
+                                    <Link
+                                        href="/searchStores"
+                                        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-gray-200 hover:text-white hover:bg-white/10 transition-colors"
+                                    >
+                                        <i className="pi pi-shopping-bag text-[10px]" />
+                                        <span>Stores</span>
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
                         <Link
                             key="Mis juegos"
                             href="/mygames"
@@ -291,6 +322,32 @@ export default function Navbar() {
                             <i className="pi pi-search text-white transition-all duration-300 group-hover:scale-125 group-hover:text-primary-400"></i>
                             Buscar
                         </Link>
+                        <div className="ml-3 pl-3 border-l border-white/10 flex flex-col gap-2">
+                            <Link
+                                href="/searchGenres"
+                                onClick={() => setMobileMenuOpen(false)}
+                                className={`p-2.5 text-[11px] rounded-lg border transition-colors font-semibold flex items-center gap-2 ${isRouteActive('/searchGenres') ? 'text-white bg-primary-500/25 border-primary-500/60' : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'}`}
+                            >
+                                <i className="pi pi-tags text-xs" />
+                                Generos
+                            </Link>
+                            <Link
+                                href="/searchPlatforms"
+                                onClick={() => setMobileMenuOpen(false)}
+                                className={`p-2.5 text-[11px] rounded-lg border transition-colors font-semibold flex items-center gap-2 ${isRouteActive('/searchPlatforms') ? 'text-white bg-primary-500/25 border-primary-500/60' : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'}`}
+                            >
+                                <i className="pi pi-desktop text-xs" />
+                                Plataformas
+                            </Link>
+                            <Link
+                                href="/searchStores"
+                                onClick={() => setMobileMenuOpen(false)}
+                                className={`p-2.5 text-[11px] rounded-lg border transition-colors font-semibold flex items-center gap-2 ${isRouteActive('/searchStores') ? 'text-white bg-primary-500/25 border-primary-500/60' : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'}`}
+                            >
+                                <i className="pi pi-shopping-bag text-xs" />
+                                Stores
+                            </Link>
+                        </div>
                         <Link
                             href="/mygames"
                             onClick={() => setMobileMenuOpen(false)}
