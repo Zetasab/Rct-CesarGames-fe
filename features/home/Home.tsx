@@ -132,7 +132,7 @@ function SpotlightMosaic({ games }: { games: Game[] }) {
                 <article
                     className="md:col-span-7 relative h-[320px] rounded-2xl overflow-hidden border border-gray-800 group cursor-pointer"
                 >
-                    <Link href={`/game/${mainGame.id}`} className="absolute inset-0 z-20" aria-label={`Ver ${mainGame.name}`} />
+                    <Link href={`/game/${mainGame.slug || mainGame.id}`} className="absolute inset-0 z-20" aria-label={`Ver ${mainGame.name}`} />
                     <div
                         className="absolute inset-0 bg-cover bg-center transition-transform duration-300 ease-in-out group-hover:scale-105"
                         style={{ backgroundImage: `url(${mainGame.background_image || "/placeholder.jpg"})` }}
@@ -156,7 +156,7 @@ function SpotlightMosaic({ games }: { games: Game[] }) {
                             key={game.id}
                             className="relative h-[152px] rounded-2xl overflow-hidden border border-gray-800 group cursor-pointer"
                         >
-                            <Link href={`/game/${game.id}`} className="absolute inset-0 z-20" aria-label={`Ver ${game.name}`} />
+                            <Link href={`/game/${game.slug || game.id}`} className="absolute inset-0 z-20" aria-label={`Ver ${game.name}`} />
                             <div
                                 className="absolute inset-0 bg-cover bg-center transition-transform duration-300 ease-in-out group-hover:scale-110"
                                 style={{ backgroundImage: `url(${game.background_image || "/placeholder.jpg"})` }}
@@ -194,7 +194,7 @@ function GamerHubSection({ games }: { games: Game[] }) {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {HUB_MISSIONS.map((mission, index) => {
                         const gameImage = games[index]?.background_image || "/placeholder.jpg";
-                        const gameId = games[index]?.id;
+                        const gameSlug = games[index]?.slug || String(games[index]?.id || "");
 
                         return (
                             <article
@@ -215,9 +215,9 @@ function GamerHubSection({ games }: { games: Game[] }) {
                                         <p className="text-sm text-gray-300 leading-relaxed">{mission.description}</p>
                                     </div>
 
-                                    {gameId ? (
+                                    {gameSlug ? (
                                         <Link
-                                            href={`/game/${gameId}`}
+                                            href={`/game/${gameSlug}`}
                                             className="mt-5 w-fit text-sm font-semibold text-black bg-[#ff4200] px-3 py-1.5 rounded-md hover:brightness-110 transition"
                                         >
                                             {mission.cta}
@@ -349,7 +349,7 @@ function HomeTabsShowcase({
                         )}
 
                         <Link
-                            href={`/game/${selectedGame.id}`}
+                            href={`/game/${selectedGame.slug || selectedGame.id}`}
                             className="w-fit p-button font-bold hover:brightness-110"
                         >
                             Ver detalle
@@ -754,6 +754,7 @@ export default function Home() {
             <HeroHeader
                 items={(trendingGames.length ? trendingGames : topRatedGames).slice(0, 6).map((game) => ({
                     id: game.id,
+                    slug: game.slug,
                     name: game.name,
                     backgroundImage: game.background_image
                 }))}
@@ -814,7 +815,7 @@ export default function Home() {
                                     <span className="bg-white/10 px-3 py-1 rounded-full">{featuredGame.genres?.[0]?.name || "Gaming"}</span>
                                 </div>
                                 <Link
-                                    href={`/game/${featuredGame.id}`}
+                                    href={`/game/${featuredGame.slug || featuredGame.id}`}
                                     className="p-button font-bold hover:brightness-110"
                                 >
                                     Ver juego

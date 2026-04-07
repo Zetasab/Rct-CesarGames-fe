@@ -180,6 +180,10 @@ class GameService extends BaseService {
         return this.get<Game>(`/${id}`);
     }
 
+    async getGameBySlug(slug: string): Promise<Game> {
+        return this.get<Game>(`/slug/${encodeURIComponent(slug)}`);
+    }
+
     async getGameMovies(id: string | number): Promise<{ results: import('../models/Game').Movie[] }> {
         return this.get<{ results: import('../models/Game').Movie[] }>(`/${id}/movies`);
     }

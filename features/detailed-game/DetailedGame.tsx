@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, MouseEvent } from 'react';
-import { Game, Movie, Screenshot } from '@/models/Game';
+import { Game, Movie } from '@/models/Game';
 import { gameService } from '@/services/GameService';
 import { gameResultService } from '@/services/GameResultService';
 import {
@@ -27,15 +27,14 @@ const getRatingColor = (title: string) => {
 };
 
 interface Props {
-    gameId: string;
+    gameSlug: string;
 }
 
 type ToastType = 'success' | 'error';
 
-export default function DetailedGame({ gameId }: Props) {
+export default function DetailedGame({ gameSlug }: Props) {
     const [game, setGame] = useState<Game | null>(null);
     const [movies, setMovies] = useState<Movie[]>([]);
-    const [screenshots, setScreenshots] = useState<Screenshot[]>([]);
     const [seriesGames, setSeriesGames] = useState<Game[]>([]);
     const [suggestedGames, setSuggestedGames] = useState<Game[]>([]);
     const [loading, setLoading] = useState(true);
@@ -52,6 +51,7 @@ export default function DetailedGame({ gameId }: Props) {
         type: 'success',
         visible: false,
     });
+    const galleryScreenshots = game?.short_screenshots || [];
     const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const router = useRouter();
 
@@ -67,7 +67,7 @@ export default function DetailedGame({ gameId }: Props) {
         }, 3000);
     };
 
-    const loadGameResultState = async () => {
+    const loadGameResultState = async (gameId: number) => {
         try {
             const list = await loadGameResultList();
             const gameResult = findGameResultByGameId(list, gameId);
@@ -82,7 +82,7 @@ export default function DetailedGame({ gameId }: Props) {
     };
 
     const handleTogglePlayed = async () => {
-        if (isUpdatingPlayed || !gameId || !game) {
+        if (isUpdatingPlayed || !game) {
             return;
         }
 
@@ -120,7 +120,7 @@ export default function DetailedGame({ gameId }: Props) {
     };
 
     const handleToggleWishlist = async () => {
-        if (isUpdatingWishlist || !gameId || !game) {
+        if (isUpdatingWishlist || !game) {
             return;
         }
 
@@ -158,9 +158,9 @@ export default function DetailedGame({ gameId }: Props) {
     };
 
     const handleGameClick = (event: MouseEvent<HTMLAnchorElement>) => {
-        const gameId = (event.currentTarget as HTMLAnchorElement).getAttribute('data-game-id');
-        if (gameId) {
-            router.push(`/game/${gameId}`);
+        const gameSlug = (event.currentTarget as HTMLAnchorElement).getAttribute('data-game-slug');
+        if (gameSlug) {
+            router.push(`/game/${gameSlug}`);
         }
     };
 
@@ -198,23 +198,21 @@ export default function DetailedGame({ gameId }: Props) {
         const loadGame = async () => {
             try {
                 // Critical data
-                const gameData = await gameService.getGameById(gameId);
+                const gameData = await gameService.getGameBySlug(gameSlug);
                 setGame(gameData);
 
                 // Secondary data (optional)
-                const [moviesData, screenshotsData, seriesData, suggestedData] = await Promise.all([
-                    gameService.getGameMovies(gameId).catch(() => ({ results: [] })),
-                    gameService.getGameScreenshots(gameId).catch(() => ({ results: [] })),
-                    gameService.getGameSeries(gameId).catch(() => ({ results: [] })),
-                    gameService.getGameSuggested(gameId).catch(() => ({ results: [] }))
+                const [moviesData, seriesData, suggestedData] = await Promise.all([
+                    gameService.getGameMovies(gameData.id).catch(() => ({ results: [] })),
+                    gameService.getGameSeries(gameData.id).catch(() => ({ results: [] })),
+                    gameService.getGameSuggested(gameData.id).catch(() => ({ results: [] }))
                 ]);
                 
                 setMovies(moviesData?.results || []);
-                setScreenshots(screenshotsData?.results || []);
                 setSeriesGames(seriesData?.results || []);
                 setSuggestedGames(suggestedData?.results || []);
 
-                await loadGameResultState();
+                await loadGameResultState(gameData.id);
             } catch (error) {
                 console.error("Error loading game data:", error);
             } finally {
@@ -222,7 +220,7 @@ export default function DetailedGame({ gameId }: Props) {
             }
         };
         loadGame();
-    }, [gameId]);
+    }, [gameSlug]);
 
     if (loading) return (
         <div className="min-h-screen bg-[#151515] text-white pt-10">
@@ -402,11 +400,11 @@ export default function DetailedGame({ gameId }: Props) {
                     )}
 
                     {/* Screenshot Gallery */}
-                    {screenshots && screenshots.length > 0 && (
+                    {galleryScreenshots.length > 0 && (
                          <section>
                             <h2 className="text-2xl font-bold mb-4 text-[#ff4200]">Gallery</h2>
                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                {screenshots.map((s, index) => (
+                                {galleryScreenshots.map((s, index) => (
                                     <div 
                                         key={s.id} 
                                         className="relative aspect-video cursor-pointer rounded-lg overflow-hidden group border border-transparent hover:border-[#ff4200]"
@@ -683,7 +681,7 @@ export default function DetailedGame({ gameId }: Props) {
                         className="absolute left-4 top-1/2 -translate-y-1/2 p-4 text-white hover:text-[#ff4200] text-4xl bg-black/50 hover:bg-black/80 rounded-full transition-colors z-50 disabled:opacity-30 disabled:cursor-not-allowed"
                         onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedImageIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : screenshots.length - 1));
+                            setSelectedImageIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : galleryScreenshots.length - 1));
                         }}
                     >
                          <i className="pi pi-chevron-left"></i>
@@ -691,7 +689,7 @@ export default function DetailedGame({ gameId }: Props) {
 
                     <div className="relative w-full h-full max-w-7xl max-h-[85vh]" onClick={(e) => e.stopPropagation()}>
                         <Image
-                            src={screenshots[selectedImageIndex].image}
+                            src={galleryScreenshots[selectedImageIndex].image}
                             alt="Full screen screenshot"
                             fill
                             className="object-contain"
@@ -700,7 +698,7 @@ export default function DetailedGame({ gameId }: Props) {
                             quality={80}
                         />
                          <div className="absolute bottom-4 left-0 right-0 text-center text-white/70 text-sm bg-black/50 py-2 rounded-full w-fit mx-auto px-6">
-                            {selectedImageIndex + 1} / {screenshots.length}
+                            {selectedImageIndex + 1} / {galleryScreenshots.length}
                         </div>
                     </div>
 
@@ -708,7 +706,7 @@ export default function DetailedGame({ gameId }: Props) {
                          className="absolute right-4 top-1/2 -translate-y-1/2 p-4 text-white hover:text-[#ff4200] text-4xl bg-black/50 hover:bg-black/80 rounded-full transition-colors z-50"
                         onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedImageIndex((prev) => (prev !== null && prev < screenshots.length - 1 ? prev + 1 : 0));
+                            setSelectedImageIndex((prev) => (prev !== null && prev < galleryScreenshots.length - 1 ? prev + 1 : 0));
                         }}
                     >
                         <i className="pi pi-chevron-right"></i>

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 
 interface GameItem {
     id: number;
+    slug: string;
     name: string;
     backgroundImage: string;
 }
@@ -71,7 +72,7 @@ const HeroHeader = ({ items }: HeroHeaderProps) => {
                <h1 className="text-2xl md:text-6xl font-bold text-white mb-2 md:mb-4 drop-shadow-lg transition-all duration-500">{currentGame.name}</h1>
                <button 
                    className="p-button font-bold hover:brightness-110 mt-2 md:mt-4 text-sm px-4 py-2 md:text-base md:px-6 md:py-3"
-                   onClick={() => router.push(`/game/${currentGame.id}`)}
+                   onClick={() => router.push(`/game/${currentGame.slug || currentGame.id}`)}
                >
                    Ver detalles
                </button>

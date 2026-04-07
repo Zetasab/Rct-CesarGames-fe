@@ -324,7 +324,8 @@ export const GameCard = memo(({
                 onPointerCancel={stopLongPress}
             >
             <Link
-                href={`/game/${game.id}`}
+                href={`/game/${game.slug || game.id}`}
+                data-game-slug={game.slug || String(game.id)}
                 className="absolute inset-0 z-[25]"
                 aria-label={`Ver ${game.name}`}
                 onClick={handleLinkClick}
