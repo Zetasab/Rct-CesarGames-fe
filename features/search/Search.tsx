@@ -11,8 +11,11 @@ import { Calendar } from "primereact/calendar";
 import { Button } from "primereact/button";
 import {
     gameService,
+    GenreListItem,
+    PlatformListItem,
     RawgPaginatedResponse,
     SearchGamesParams,
+    StoreListItem,
 } from "@/services/GameService";
 import { Game } from "@/models/Game";
 import {
@@ -20,16 +23,10 @@ import {
     getGameResultGameId,
     loadGameResultList,
 } from "@/services/GameResultState";
-import {
-    genresCatalog,
-    platformsCatalog,
-    storesCatalog,
-} from "@/app/static/catalog-data";
 import { authService } from "@/services/AuthService";
 import { useAuth } from "@/context/AuthContext";
 
 type GameStatusFlags = { isPlayed: boolean; isWishlist: boolean };
-type DateRange = { from: Date | null; to: Date | null };
 type SelectOption = { label: string; value: string };
 
 const PAGE_SIZE = 20;
@@ -60,9 +57,12 @@ export default function Search() {
     const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
     const [selectedStores, setSelectedStores] = useState<string[]>([]);
     const [ordering, setOrdering] = useState("");
-    const [dateRanges, setDateRanges] = useState<DateRange[]>([{ from: null, to: null }]);
+    const [dateRange, setDateRange] = useState<Date[] | null>(null);
     const [searchPrecise, setSearchPrecise] = useState(false);
     const [searchExact, setSearchExact] = useState(false);
+    const [genreOptions, setGenreOptions] = useState<SelectOption[]>([]);
+    const [platformOptions, setPlatformOptions] = useState<SelectOption[]>([]);
+    const [storeOptions, setStoreOptions] = useState<SelectOption[]>([]);
 
     const [games, setGames] = useState<Game[]>([]);
     const [count, setCount] = useState(0);
@@ -76,21 +76,6 @@ export default function Search() {
     const hasPreviousPage = page > 1;
     const hasNextPage = page * PAGE_SIZE < count;
 
-    const genreOptions = useMemo<SelectOption[]>(
-        () => genresCatalog.map((genre) => ({ label: genre.name, value: String(genre.id) })),
-        []
-    );
-
-    const platformOptions = useMemo<SelectOption[]>(
-        () => platformsCatalog.slice(0, 40).map((platform) => ({ label: platform.name, value: String(platform.id) })),
-        []
-    );
-
-    const storeOptions = useMemo<SelectOption[]>(
-        () => storesCatalog.map((store) => ({ label: store.name, value: String(store.id) })),
-        []
-    );
-
     const datesFilter = useMemo(() => {
         const formatDate = (value: Date) => {
             const year = value.getFullYear();
@@ -99,32 +84,15 @@ export default function Search() {
             return `${year}-${month}-${day}`;
         };
 
-        const segments = dateRanges
-            .filter((range) => range.from && range.to && range.from <= range.to)
-            .map((range) => `${formatDate(range.from as Date)},${formatDate(range.to as Date)}`);
+        const from = dateRange?.[0] ?? null;
+        const to = dateRange?.[1] ?? null;
 
-        return segments.length ? segments.join(".") : undefined;
-    }, [dateRanges]);
+        if (!from || !to || from > to) {
+            return undefined;
+        }
 
-    const updateDateRange = (index: number, key: "from" | "to", value: Date | null) => {
-        setDateRanges((current) =>
-            current.map((range, rangeIndex) => (rangeIndex === index ? { ...range, [key]: value } : range))
-        );
-    };
-
-    const addDateRange = () => {
-        setDateRanges((current) => [...current, { from: null, to: null }]);
-    };
-
-    const removeDateRange = (index: number) => {
-        setDateRanges((current) => {
-            if (current.length === 1) {
-                return [{ from: null, to: null }];
-            }
-
-            return current.filter((_, rangeIndex) => rangeIndex !== index);
-        });
-    };
+        return `${formatDate(from)},${formatDate(to)}`;
+    }, [dateRange]);
 
     const loadGameStatuses = useCallback(async () => {
         try {
@@ -191,7 +159,7 @@ export default function Search() {
         setSelectedPlatforms([]);
         setSelectedStores([]);
         setOrdering("");
-        setDateRanges([{ from: null, to: null }]);
+        setDateRange(null);
         setSearchPrecise(false);
         setSearchExact(false);
     };
@@ -208,6 +176,53 @@ export default function Search() {
             [String(gameId)]: next,
         }));
     };
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadFilterOptions = async () => {
+            const [genresResult, platformsResult, storesResult] = await Promise.allSettled([
+                gameService.getGenres(),
+                gameService.getPlatforms(),
+                gameService.getStores(),
+            ]);
+
+            if (!isMounted) {
+                return;
+            }
+
+            const genres = genresResult.status === "fulfilled" ? genresResult.value : [];
+            const platforms = platformsResult.status === "fulfilled" ? platformsResult.value : [];
+            const stores = storesResult.status === "fulfilled" ? storesResult.value : [];
+
+            setGenreOptions(
+                (Array.isArray(genres) ? genres : []).map((genre: GenreListItem) => ({
+                    label: genre.name,
+                    value: String(genre.id),
+                }))
+            );
+
+            setPlatformOptions(
+                (Array.isArray(platforms) ? platforms : []).slice(0, 40).map((platform: PlatformListItem) => ({
+                    label: platform.name,
+                    value: String(platform.id),
+                }))
+            );
+
+            setStoreOptions(
+                (Array.isArray(stores) ? stores : []).map((store: StoreListItem) => ({
+                    label: store.name,
+                    value: String(store.id),
+                }))
+            );
+        };
+
+        void loadFilterOptions();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
 
     useEffect(() => {
         if (hasInitializedAutoSearch.current) {
@@ -261,7 +276,7 @@ export default function Search() {
         selectedPlatforms,
         selectedStores,
         ordering,
-        dateRanges,
+        dateRange,
         searchPrecise,
         searchExact,
         runSearch,
@@ -296,17 +311,19 @@ export default function Search() {
                     <form
                         id="search-filters-form"
                         onSubmit={handleSubmit}
-                        className={`space-y-4 ${isMobileFiltersOpen ? "block" : "hidden"} md:block`}
+                        className={`w-full space-y-2 ${isMobileFiltersOpen ? "block" : "hidden"} md:block`}
                     >
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                            <InputText
-                                value={query}
-                                onChange={(event) => setQuery(event.target.value)}
-                                placeholder="Buscar por nombre..."
-                                className="md:col-span-6 bg-transparent border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                            />
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 items-start justify-items-stretch">
+                            <div className="md:col-span-3 p-1">
+                                <InputText
+                                    value={query}
+                                    onChange={(event) => setQuery(event.target.value)}
+                                    placeholder="Buscar por nombre..."
+                                    className="w-full bg-transparent border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#ff4200]"
+                                />
+                            </div>
 
-                            <div id="genres-filter" className="md:col-span-2 scroll-mt-28">
+                            <div id="genres-filter" className="md:col-span-2 p-1 scroll-mt-28">
                                 <MultiSelect
                                     value={selectedGenres}
                                     onChange={(event) => setSelectedGenres((event.value as string[]) ?? [])}
@@ -316,12 +333,12 @@ export default function Search() {
                                     display="chip"
                                     filter
                                     placeholder="Géneros"
-                                    className="w-full"
+                                    className="w-full text-xs"
                                     panelClassName="bg-[#151515] text-white"
                                 />
                             </div>
 
-                            <div id="platforms-filter" className="md:col-span-2 scroll-mt-28">
+                            <div id="platforms-filter" className="md:col-span-2 p-1 scroll-mt-28">
                                 <MultiSelect
                                     value={selectedPlatforms}
                                     onChange={(event) => setSelectedPlatforms((event.value as string[]) ?? [])}
@@ -331,12 +348,12 @@ export default function Search() {
                                     display="chip"
                                     filter
                                     placeholder="Plataformas"
-                                    className="w-full"
+                                    className="w-full text-xs"
                                     panelClassName="bg-[#151515] text-white"
                                 />
                             </div>
 
-                            <div id="stores-filter" className="md:col-span-2 scroll-mt-28">
+                            <div id="stores-filter" className="md:col-span-2 p-1 scroll-mt-28">
                                 <MultiSelect
                                     value={selectedStores}
                                     onChange={(event) => setSelectedStores((event.value as string[]) ?? [])}
@@ -346,25 +363,27 @@ export default function Search() {
                                     display="chip"
                                     filter
                                     placeholder="Stores"
-                                    className="w-full"
+                                    className="w-full text-xs"
                                     panelClassName="bg-[#151515] text-white"
+                                />
+                            </div>
+
+                            <div className="md:col-span-3 p-1">
+                                <Calendar
+                                    value={dateRange}
+                                    onChange={(event) => setDateRange((event.value as Date[] | null) ?? null)}
+                                    selectionMode="range"
+                                    dateFormat="yy-mm-dd"
+                                    showIcon
+                                    readOnlyInput
+                                    placeholder="Desde - Hasta"
+                                    className="w-full text-xs"
                                 />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                            <Dropdown
-                                value={ordering}
-                                onChange={(event) => setOrdering((event.value as string) ?? "")}
-                                options={[{ label: "Orden por defecto", value: "" }, ...ORDERING_OPTIONS]}
-                                optionLabel="label"
-                                optionValue="value"
-                                placeholder="Orden por defecto"
-                                className="md:col-span-4"
-                                panelClassName="bg-[#151515] text-white"
-                            />
-
-                            <div className="md:col-span-3 flex items-center gap-4 text-sm text-gray-300">
+                        <div className="flex flex-wrap items-center justify-start gap-2">
+                            <div className="flex items-center gap-3 text-xs text-gray-300">
                                 <label className="inline-flex items-center gap-2 cursor-pointer">
                                     <Checkbox
                                         inputId="searchPrecise"
@@ -382,62 +401,33 @@ export default function Search() {
                                     <span>Exacto</span>
                                 </label>
                             </div>
-                        </div>
 
-                        <div className="space-y-2">
-                            <p className="text-xs text-gray-400">
-                                Rango de fechas (formato backend: YYYY-MM-DD,YYYY-MM-DD. Puedes añadir varios rangos).
-                            </p>
-                            {dateRanges.map((range, index) => (
-                                <div key={`date-range-${index}`} className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                                    <Calendar
-                                        value={range.from}
-                                        onChange={(event) => updateDateRange(index, "from", (event.value as Date | null) ?? null)}
-                                        dateFormat="yy-mm-dd"
-                                        showIcon
-                                        placeholder="Desde"
-                                        className="md:col-span-5"
-                                    />
-                                    <Calendar
-                                        value={range.to}
-                                        onChange={(event) => updateDateRange(index, "to", (event.value as Date | null) ?? null)}
-                                        dateFormat="yy-mm-dd"
-                                        showIcon
-                                        placeholder="Hasta"
-                                        className="md:col-span-5"
-                                    />
-                                    <Button
-                                        type="button"
-                                        label="Quitar"
-                                        onClick={() => removeDateRange(index)}
-                                        outlined
-                                        className="md:col-span-2"
-                                    />
-                                </div>
-                            ))}
-                            <Button
-                                type="button"
-                                label="Añadir rango"
-                                icon="pi pi-plus"
-                                onClick={addDateRange}
-                                outlined
+                            <Dropdown
+                                value={ordering}
+                                onChange={(event) => setOrdering((event.value as string) ?? "")}
+                                options={[{ label: "Orden por defecto", value: "" }, ...ORDERING_OPTIONS]}
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Ordenar"
+                                className="w-full md:w-56 text-xs"
+                                panelClassName="bg-[#151515] text-white"
                             />
-                        </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                            <Button
-                                type="submit"
-                                label="Buscar"
-                                disabled={loading}
-                            />
-                            <Button
-                                type="button"
-                                label="Limpiar"
-                                onClick={handleClearFilters}
-                                outlined
-                                disabled={loading}
-                            />
-                            <span className="text-sm text-gray-400">{count.toLocaleString()} resultados</span>
+                            <div className="flex flex-wrap items-center gap-2 justify-start">
+                                <Button
+                                    type="submit"
+                                    label="Buscar"
+                                    disabled={loading}
+                                />
+                                <Button
+                                    type="button"
+                                    label="Limpiar"
+                                    onClick={handleClearFilters}
+                                    outlined
+                                    disabled={loading}
+                                />
+                                <span className="text-xs text-gray-400">{count.toLocaleString()} resultados</span>
+                            </div>
                         </div>
                     </form>
                 </section>
