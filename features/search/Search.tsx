@@ -3,6 +3,12 @@
 import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GameCard, GameCardSkeleton } from "@/components/game-carousel/GameCarousel";
 import Footer from "@/shared/footer/Footer";
+import { InputText } from "primereact/inputtext";
+import { MultiSelect } from "primereact/multiselect";
+import { Dropdown } from "primereact/dropdown";
+import { Checkbox } from "primereact/checkbox";
+import { Calendar } from "primereact/calendar";
+import { Button } from "primereact/button";
 import {
     gameService,
     RawgPaginatedResponse,
@@ -17,95 +23,44 @@ import {
 import {
     genresCatalog,
     platformsCatalog,
-    tagsCatalog,
+    storesCatalog,
 } from "@/app/static/catalog-data";
 import { authService } from "@/services/AuthService";
 import { useAuth } from "@/context/AuthContext";
 
 type GameStatusFlags = { isPlayed: boolean; isWishlist: boolean };
-type QuickQueryKey = "" | "hot-now" | "upcoming" | "anticipated" | "popular" | "trending";
+type DateRange = { from: Date | null; to: Date | null };
+type SelectOption = { label: string; value: string };
 
 const PAGE_SIZE = 20;
 
 const ORDERING_OPTIONS: Array<{ label: string; value: string }> = [
-    { label: "Más populares", value: "-added" },
-    { label: "Mejor valorados", value: "-rating" },
-    { label: "Más recientes", value: "-released" },
     { label: "Nombre (A-Z)", value: "name" },
     { label: "Nombre (Z-A)", value: "-name" },
+    { label: "Lanzamiento (asc)", value: "released" },
+    { label: "Lanzamiento (desc)", value: "-released" },
+    { label: "Añadidos (asc)", value: "added" },
+    { label: "Añadidos (desc)", value: "-added" },
+    { label: "Creado (asc)", value: "created" },
+    { label: "Creado (desc)", value: "-created" },
+    { label: "Actualizado (asc)", value: "updated" },
+    { label: "Actualizado (desc)", value: "-updated" },
+    { label: "Rating (asc)", value: "rating" },
+    { label: "Rating (desc)", value: "-rating" },
+    { label: "Metacritic (asc)", value: "metacritic" },
     { label: "Metacritic (desc)", value: "-metacritic" },
 ];
-
-const QUICK_QUERY_OPTIONS: Array<{ label: string; value: QuickQueryKey }> = [
-    { label: "Selecciona una consulta rápida", value: "" },
-    { label: "Juegos del momento", value: "hot-now" },
-    { label: "Futuros lanzamientos", value: "upcoming" },
-    { label: "Lanzamientos más esperados", value: "anticipated" },
-    { label: "Más populares", value: "popular" },
-    { label: "Tendencias", value: "trending" },
-];
-
-const formatDate = (date: Date) => date.toISOString().split("T")[0];
-
-const getQuickQueryParams = (queryKey: QuickQueryKey): Partial<SearchGamesParams> => {
-    const today = new Date();
-
-    switch (queryKey) {
-        case "hot-now": {
-            const threeMonthsAgo = new Date(today);
-            threeMonthsAgo.setMonth(today.getMonth() - 3);
-
-            return {
-                ordering: "-rating",
-                dates: `${formatDate(threeMonthsAgo)},${formatDate(today)}`,
-            };
-        }
-        case "upcoming": {
-            const sixMonthsFromNow = new Date(today);
-            sixMonthsFromNow.setMonth(today.getMonth() + 6);
-
-            return {
-                ordering: "released",
-                dates: `${formatDate(today)},${formatDate(sixMonthsFromNow)}`,
-            };
-        }
-        case "anticipated": {
-            const oneYearFromNow = new Date(today);
-            oneYearFromNow.setFullYear(today.getFullYear() + 1);
-
-            return {
-                dates: `${formatDate(today)},${formatDate(oneYearFromNow)}`,
-            };
-        }
-        case "popular":
-            return { dates: undefined };
-        case "trending": {
-            const oneYearAgo = new Date(today);
-            oneYearAgo.setFullYear(today.getFullYear() - 1);
-
-            return {
-                dates: `${formatDate(oneYearAgo)},${formatDate(today)}`,
-            };
-        }
-        default:
-            return {};
-    }
-};
 
 export default function Search() {
     const { logout } = useAuth();
     const hasInitializedAutoSearch = useRef(false);
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
-    const [quickQuery, setQuickQuery] = useState<QuickQueryKey>("");
     const [query, setQuery] = useState("");
-    const [selectedGenre, setSelectedGenre] = useState("");
-    const [selectedPlatform, setSelectedPlatform] = useState("");
-    const [selectedTag, setSelectedTag] = useState("");
+    const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+    const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+    const [selectedStores, setSelectedStores] = useState<string[]>([]);
     const [ordering, setOrdering] = useState("");
-    const [metacriticMin, setMetacriticMin] = useState("");
-    const [metacriticMax, setMetacriticMax] = useState("");
-    const [releasedFrom, setReleasedFrom] = useState("");
-    const [releasedTo, setReleasedTo] = useState("");
+    const [dateRanges, setDateRanges] = useState<DateRange[]>([{ from: null, to: null }]);
     const [searchPrecise, setSearchPrecise] = useState(false);
     const [searchExact, setSearchExact] = useState(false);
 
@@ -121,32 +76,55 @@ export default function Search() {
     const hasPreviousPage = page > 1;
     const hasNextPage = page * PAGE_SIZE < count;
 
-    const metacriticFilter = useMemo(() => {
-        const min = Number(metacriticMin);
-        const max = Number(metacriticMax);
+    const genreOptions = useMemo<SelectOption[]>(
+        () => genresCatalog.map((genre) => ({ label: genre.name, value: String(genre.id) })),
+        []
+    );
 
-        if (!Number.isFinite(min) || !Number.isFinite(max)) {
-            return undefined;
-        }
+    const platformOptions = useMemo<SelectOption[]>(
+        () => platformsCatalog.slice(0, 40).map((platform) => ({ label: platform.name, value: String(platform.id) })),
+        []
+    );
 
-        if (min < 0 || max < 0 || min > 100 || max > 100 || min > max) {
-            return undefined;
-        }
-
-        return `${min},${max}`;
-    }, [metacriticMin, metacriticMax]);
+    const storeOptions = useMemo<SelectOption[]>(
+        () => storesCatalog.map((store) => ({ label: store.name, value: String(store.id) })),
+        []
+    );
 
     const datesFilter = useMemo(() => {
-        if (!releasedFrom || !releasedTo) {
-            return undefined;
-        }
+        const formatDate = (value: Date) => {
+            const year = value.getFullYear();
+            const month = String(value.getMonth() + 1).padStart(2, "0");
+            const day = String(value.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        };
 
-        if (releasedFrom > releasedTo) {
-            return undefined;
-        }
+        const segments = dateRanges
+            .filter((range) => range.from && range.to && range.from <= range.to)
+            .map((range) => `${formatDate(range.from as Date)},${formatDate(range.to as Date)}`);
 
-        return `${releasedFrom},${releasedTo}`;
-    }, [releasedFrom, releasedTo]);
+        return segments.length ? segments.join(".") : undefined;
+    }, [dateRanges]);
+
+    const updateDateRange = (index: number, key: "from" | "to", value: Date | null) => {
+        setDateRanges((current) =>
+            current.map((range, rangeIndex) => (rangeIndex === index ? { ...range, [key]: value } : range))
+        );
+    };
+
+    const addDateRange = () => {
+        setDateRanges((current) => [...current, { from: null, to: null }]);
+    };
+
+    const removeDateRange = (index: number) => {
+        setDateRanges((current) => {
+            if (current.length === 1) {
+                return [{ from: null, to: null }];
+            }
+
+            return current.filter((_, rangeIndex) => rangeIndex !== index);
+        });
+    };
 
     const loadGameStatuses = useCallback(async () => {
         try {
@@ -178,22 +156,21 @@ export default function Search() {
             search: query.trim() || undefined,
             searchPrecise,
             searchExact,
-            genres: selectedGenre || undefined,
-            platforms: selectedPlatform || undefined,
-            tags: selectedTag || undefined,
+            genres: selectedGenres.join(",") || undefined,
+            platforms: selectedPlatforms.join(",") || undefined,
+            stores: selectedStores.join(",") || undefined,
             ordering: ordering || undefined,
-            metacritic: metacriticFilter,
             dates: datesFilter,
             ...overrides,
         };
 
         try {
             const response: RawgPaginatedResponse<Game> = await gameService.searchGames(params);
-            const safeResults = Array.isArray(response.results) ? response.results : [];
+            const safeResults = Array.isArray(response.items) ? response.items : [];
 
-            setPage(nextPage);
+            setPage(Number.isFinite(response.page) ? response.page : nextPage);
             setGames(safeResults);
-            setCount(Number.isFinite(response.count) ? response.count : 0);
+            setCount(Number.isFinite(response.totalCount) ? response.totalCount : 0);
         } catch {
             setGames([]);
             setCount(0);
@@ -201,7 +178,7 @@ export default function Search() {
         } finally {
             setLoading(false);
         }
-    }, [datesFilter, metacriticFilter, ordering, query, searchExact, searchPrecise, selectedGenre, selectedPlatform, selectedTag]);
+    }, [datesFilter, ordering, query, searchExact, searchPrecise, selectedGenres, selectedPlatforms, selectedStores]);
 
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -209,42 +186,14 @@ export default function Search() {
     };
 
     const handleClearFilters = () => {
-        setQuickQuery("");
         setQuery("");
-        setSelectedGenre("");
-        setSelectedPlatform("");
-        setSelectedTag("");
+        setSelectedGenres([]);
+        setSelectedPlatforms([]);
+        setSelectedStores([]);
         setOrdering("");
-        setMetacriticMin("");
-        setMetacriticMax("");
-        setReleasedFrom("");
-        setReleasedTo("");
+        setDateRanges([{ from: null, to: null }]);
         setSearchPrecise(false);
         setSearchExact(false);
-    };
-
-    const handleQuickQueryChange = (value: QuickQueryKey) => {
-        setQuickQuery(value);
-
-        if (!value) {
-            return;
-        }
-
-        const preset = getQuickQueryParams(value);
-        const [fromDate, toDate] = (preset.dates || "").split(",");
-
-        setQuery("");
-        setSelectedGenre("");
-        setSelectedPlatform("");
-        setSelectedTag("");
-        setMetacriticMin("");
-        setMetacriticMax("");
-        setSearchPrecise(false);
-        setSearchExact(false);
-        setOrdering(preset.ordering || "");
-        setReleasedFrom(fromDate || "");
-        setReleasedTo(toDate || "");
-
     };
 
     const toggleMenu = (event: MouseEvent, gameId: number) => {
@@ -308,14 +257,11 @@ export default function Search() {
         };
     }, [
         query,
-        selectedGenre,
-        selectedPlatform,
-        selectedTag,
+        selectedGenres,
+        selectedPlatforms,
+        selectedStores,
         ordering,
-        metacriticMin,
-        metacriticMax,
-        releasedFrom,
-        releasedTo,
+        dateRanges,
         searchPrecise,
         searchExact,
         runSearch,
@@ -327,18 +273,24 @@ export default function Search() {
                 <section className="mb-6  p-4 md:p-5">
                     <h1 className="text-2xl md:text-3xl font-bold mb-1">Buscar juegos</h1>
                     <p className="text-sm text-gray-400 mb-4">
-                        Búsqueda RAWG con filtros por texto, categoría, plataforma, tag, fechas y metacritic.
+                        Filtros: nombre, precisión, exactitud, plataformas, stores, géneros, fechas y ordenación.
                     </p>
 
                     <button
                         type="button"
                         onClick={() => setIsMobileFiltersOpen((current) => !current)}
-                        className="md:hidden w-full mb-4 px-4 py-2 rounded-lg border border-gray-700 text-sm font-semibold flex items-center justify-between"
+                        className="md:hidden w-full mb-4"
                         aria-expanded={isMobileFiltersOpen}
                         aria-controls="search-filters-form"
                     >
-                        <span>Filtros</span>
-                        <i className={`pi ${isMobileFiltersOpen ? "pi-chevron-up" : "pi-chevron-down"}`} />
+                        <Button
+                            type="button"
+                            className="w-full"
+                            outlined
+                            label="Filtros"
+                            icon={`pi ${isMobileFiltersOpen ? "pi-chevron-up" : "pi-chevron-down"}`}
+                            iconPos="right"
+                        />
                     </button>
 
                     <form
@@ -347,155 +299,138 @@ export default function Search() {
                         className={`space-y-4 ${isMobileFiltersOpen ? "block" : "hidden"} md:block`}
                     >
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                            <select
-                                value={quickQuery}
-                                onChange={(event) => handleQuickQueryChange(event.target.value as QuickQueryKey)}
-                                className="md:col-span-4 bg-[#151515] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                            >
-                                {QUICK_QUERY_OPTIONS.map((option) => (
-                                    <option key={option.value || "none"} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="md:col-span-8 flex items-center text-xs md:text-sm text-gray-400 px-1">
-                                Consultas tipo con filtros preconfigurados para descubrir juegos rápido.
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                            <input
+                            <InputText
                                 value={query}
                                 onChange={(event) => setQuery(event.target.value)}
                                 placeholder="Buscar por nombre..."
-                                className="md:col-span-5 bg-transparent border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
+                                className="md:col-span-6 bg-transparent border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
                             />
 
-                            <select
-                                value={selectedGenre}
-                                onChange={(event) => setSelectedGenre(event.target.value)}
-                                className="md:col-span-2 bg-[#151515] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                            >
-                                <option value="">Todos los géneros</option>
-                                {genresCatalog.map((genre) => (
-                                    <option key={genre.id} value={String(genre.id)}>
-                                        {genre.name}
-                                    </option>
-                                ))}
-                            </select>
+                            <MultiSelect
+                                value={selectedGenres}
+                                onChange={(event) => setSelectedGenres((event.value as string[]) ?? [])}
+                                options={genreOptions}
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                filter
+                                placeholder="Géneros"
+                                className="md:col-span-2"
+                                panelClassName="bg-[#151515] text-white"
+                            />
 
-                            <select
-                                value={selectedPlatform}
-                                onChange={(event) => setSelectedPlatform(event.target.value)}
-                                className="md:col-span-2 bg-[#151515] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                            >
-                                <option value="">Todas las plataformas</option>
-                                {platformsCatalog.slice(0, 40).map((platform) => (
-                                    <option key={platform.id} value={String(platform.id)}>
-                                        {platform.name}
-                                    </option>
-                                ))}
-                            </select>
+                            <MultiSelect
+                                value={selectedPlatforms}
+                                onChange={(event) => setSelectedPlatforms((event.value as string[]) ?? [])}
+                                options={platformOptions}
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                filter
+                                placeholder="Plataformas"
+                                className="md:col-span-2"
+                                panelClassName="bg-[#151515] text-white"
+                            />
 
-                            <select
-                                value={selectedTag}
-                                onChange={(event) => setSelectedTag(event.target.value)}
-                                className="md:col-span-3 bg-[#151515] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                            >
-                                <option value="">Todos los tags</option>
-                                {tagsCatalog.slice(0, 60).map((tag) => (
-                                    <option key={tag.id} value={String(tag.id)}>
-                                        {tag.name}
-                                    </option>
-                                ))}
-                            </select>
+                            <MultiSelect
+                                value={selectedStores}
+                                onChange={(event) => setSelectedStores((event.value as string[]) ?? [])}
+                                options={storeOptions}
+                                optionLabel="label"
+                                optionValue="value"
+                                display="chip"
+                                filter
+                                placeholder="Stores"
+                                className="md:col-span-2"
+                                panelClassName="bg-[#151515] text-white"
+                            />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
-                            <select
+                            <Dropdown
                                 value={ordering}
-                                onChange={(event) => setOrdering(event.target.value)}
-                                className="md:col-span-3 bg-[#151515] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                            >
-                                {ORDERING_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                        {option.label}
-                                    </option>
-                                ))}
-                            </select>
-
-                            <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={metacriticMin}
-                                onChange={(event) => setMetacriticMin(event.target.value)}
-                                placeholder="Metacritic min"
-                                className="md:col-span-2 bg-transparent border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                            />
-
-                            <input
-                                type="number"
-                                min={0}
-                                max={100}
-                                value={metacriticMax}
-                                onChange={(event) => setMetacriticMax(event.target.value)}
-                                placeholder="Metacritic max"
-                                className="md:col-span-2 bg-transparent border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                            />
-
-                            <input
-                                type="date"
-                                value={releasedFrom}
-                                onChange={(event) => setReleasedFrom(event.target.value)}
-                                className="md:col-span-2 bg-[#151515] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                            />
-
-                            <input
-                                type="date"
-                                value={releasedTo}
-                                onChange={(event) => setReleasedTo(event.target.value)}
-                                className="md:col-span-2 bg-[#151515] border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
+                                onChange={(event) => setOrdering((event.value as string) ?? "")}
+                                options={[{ label: "Orden por defecto", value: "" }, ...ORDERING_OPTIONS]}
+                                optionLabel="label"
+                                optionValue="value"
+                                placeholder="Orden por defecto"
+                                className="md:col-span-4"
+                                panelClassName="bg-[#151515] text-white"
                             />
 
                             <div className="md:col-span-3 flex items-center gap-4 text-sm text-gray-300">
                                 <label className="inline-flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
+                                    <Checkbox
+                                        inputId="searchPrecise"
                                         checked={searchPrecise}
-                                        onChange={(event) => setSearchPrecise(event.target.checked)}
-                                        className="accent-[#ff4200]"
+                                        onChange={(event) => setSearchPrecise(Boolean(event.checked))}
                                     />
-                                    Preciso
+                                    <span>Preciso</span>
                                 </label>
                                 <label className="inline-flex items-center gap-2 cursor-pointer">
-                                    <input
-                                        type="checkbox"
+                                    <Checkbox
+                                        inputId="searchExact"
                                         checked={searchExact}
-                                        onChange={(event) => setSearchExact(event.target.checked)}
-                                        className="accent-[#ff4200]"
+                                        onChange={(event) => setSearchExact(Boolean(event.checked))}
                                     />
-                                    Exacto
+                                    <span>Exacto</span>
                                 </label>
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3">
-                            <button
-                                type="submit"
-                                className="px-4 py-2 rounded-lg bg-[#ff4200] text-black font-semibold hover:brightness-110 transition cursor-pointer"
-                                disabled={loading}
-                            >
-                                Buscar
-                            </button>
-                            <button
+                        <div className="space-y-2">
+                            <p className="text-xs text-gray-400">
+                                Rango de fechas (formato backend: YYYY-MM-DD,YYYY-MM-DD. Puedes añadir varios rangos).
+                            </p>
+                            {dateRanges.map((range, index) => (
+                                <div key={`date-range-${index}`} className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                                    <Calendar
+                                        value={range.from}
+                                        onChange={(event) => updateDateRange(index, "from", (event.value as Date | null) ?? null)}
+                                        dateFormat="yy-mm-dd"
+                                        showIcon
+                                        placeholder="Desde"
+                                        className="md:col-span-5"
+                                    />
+                                    <Calendar
+                                        value={range.to}
+                                        onChange={(event) => updateDateRange(index, "to", (event.value as Date | null) ?? null)}
+                                        dateFormat="yy-mm-dd"
+                                        showIcon
+                                        placeholder="Hasta"
+                                        className="md:col-span-5"
+                                    />
+                                    <Button
+                                        type="button"
+                                        label="Quitar"
+                                        onClick={() => removeDateRange(index)}
+                                        outlined
+                                        className="md:col-span-2"
+                                    />
+                                </div>
+                            ))}
+                            <Button
                                 type="button"
-                                onClick={handleClearFilters}
-                                className="px-4 py-2 rounded-lg border border-gray-600 text-white hover:border-gray-400 hover:bg-white/5 transition cursor-pointer"
+                                label="Añadir rango"
+                                icon="pi pi-plus"
+                                onClick={addDateRange}
+                                outlined
+                            />
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Button
+                                type="submit"
+                                label="Buscar"
                                 disabled={loading}
-                            >
-                                Limpiar
-                            </button>
+                            />
+                            <Button
+                                type="button"
+                                label="Limpiar"
+                                onClick={handleClearFilters}
+                                outlined
+                                disabled={loading}
+                            />
                             <span className="text-sm text-gray-400">{count.toLocaleString()} resultados</span>
                         </div>
                     </form>
@@ -549,23 +484,21 @@ export default function Search() {
                             </div>
 
                             <div className="mt-8 flex items-center justify-center gap-4">
-                                <button
+                                <Button
                                     type="button"
                                     onClick={() => hasPreviousPage && void runSearch(page - 1)}
                                     disabled={!hasPreviousPage || loading}
-                                    className="px-4 py-2 rounded-lg border border-gray-600 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-400 hover:bg-white/5 transition cursor-pointer"
-                                >
-                                    Anterior
-                                </button>
+                                    label="Anterior"
+                                    outlined
+                                />
                                 <span className="text-sm text-gray-300">Página {page}</span>
-                                <button
+                                <Button
                                     type="button"
                                     onClick={() => hasNextPage && void runSearch(page + 1)}
                                     disabled={!hasNextPage || loading}
-                                    className="px-4 py-2 rounded-lg border border-gray-600 text-white disabled:opacity-40 disabled:cursor-not-allowed hover:border-gray-400 hover:bg-white/5 transition cursor-pointer"
-                                >
-                                    Siguiente
-                                </button>
+                                    label="Siguiente"
+                                    outlined
+                                />
                             </div>
                         </>
                     )}

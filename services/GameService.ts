@@ -4,10 +4,10 @@ import { getBaseUrl } from './config';
 import { Game } from '../models/Game';
 
 export interface RawgPaginatedResponse<T> {
-    count: number;
-    next: string | null;
-    previous: string | null;
-    results: T[];
+    items: T[];
+    totalCount: number;
+    page: number;
+    pageSize: number;
 }
 
 export interface SearchGamesParams {
@@ -16,9 +16,8 @@ export interface SearchGamesParams {
     searchExact?: boolean;
     genres?: string;
     platforms?: string;
-    tags?: string;
+    stores?: string;
     ordering?: string;
-    metacritic?: string;
     dates?: string;
     page?: number;
     pageSize?: number;
@@ -26,7 +25,7 @@ export interface SearchGamesParams {
 
 class GameService extends BaseService {
     constructor() {
-        super('games');
+        super('api/games');
     }
 
     async getGames(): Promise<{ results: Game[] }> {
@@ -108,16 +107,12 @@ class GameService extends BaseService {
             query.set('platforms', params.platforms.trim());
         }
 
-        if (params.tags?.trim()) {
-            query.set('tags', params.tags.trim());
+        if (params.stores?.trim()) {
+            query.set('stores', params.stores.trim());
         }
 
         if (params.ordering?.trim()) {
             query.set('ordering', params.ordering.trim());
-        }
-
-        if (params.metacritic?.trim()) {
-            query.set('metacritic', params.metacritic.trim());
         }
 
         if (params.dates?.trim()) {
@@ -125,10 +120,10 @@ class GameService extends BaseService {
         }
 
         if (typeof window !== 'undefined') {
-            console.log('[GameService.searchGames] API query:', `${getBaseUrl()}/games?${query.toString()}`);
+            console.log('[GameService.searchGames] API query:', `${getBaseUrl()}/api/games/search?${query.toString()}`);
         }
 
-        return this.get<RawgPaginatedResponse<Game>>(`?${query.toString()}`);
+        return this.get<RawgPaginatedResponse<Game>>(`/search?${query.toString()}`);
     }
 
     async getGameById(id: string | number): Promise<Game> {
