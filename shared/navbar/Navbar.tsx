@@ -7,6 +7,7 @@ import { Button } from 'primereact/button';
 import { Sidebar } from 'primereact/sidebar';
 import Image from 'next/image';
 import { useAuth } from '@/context/AuthContext';
+import { isViewerUser } from '@/services/user-role';
 
 export default function Navbar() {
     const [scrolled, setScrolled] = useState(false);
@@ -16,6 +17,7 @@ export default function Navbar() {
 
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const { user, logout } = useAuth();
+    const isViewer = isViewerUser(user);
     const profileImage = user?.profileimg || user?.ProfileImg || user?.profileImg || user?.avatar || user?.image || '/Logo.png';
     const profileName = user?.username || user?.name || user?.Name || 'Jugador';
     const profileEmail = user?.email || user?.Email || '';
@@ -152,16 +154,18 @@ export default function Navbar() {
                                 </div>
                             </div>
                         </div>
-                        <Link
-                            key="Mis juegos"
-                            href="/mygames"
-                            style={{ fontFamily: 'var(--font-press-start-2p)' }}
-                            className={`relative transition-colors font-bold text-[10px] uppercase tracking-wider group py-2 px-3 rounded-md border flex items-center gap-2 ${isRouteActive('/mygames') ? 'text-white bg-primary-500/25 border-primary-500/60 shadow-[0_0_14px_rgba(255,66,0,0.45)]' : 'text-gray-300 hover:text-white border-transparent hover:bg-white/5'}`}
-                        >
-                            <i className={`pi pi-th-large text-white text-lg transition-all duration-300 group-hover:scale-125 group-hover:rotate-12 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] ${isRouteActive('/mygames') ? 'scale-125 text-primary-400 drop-shadow-[0_0_12px_rgba(255,66,0,0.9)]' : ''}`}></i>
-                            <span>Mis juegos</span>
-                            <span className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-300 ease-out shadow-[0_0_12px_rgba(255,66,0,0.6)] ${isRouteActive('/mygames') ? 'w-full opacity-100' : 'w-0 opacity-0 group-hover:w-full group-hover:opacity-100'}`}></span>
-                        </Link>
+                        {!isViewer && (
+                            <Link
+                                key="Mis juegos"
+                                href="/mygames"
+                                style={{ fontFamily: 'var(--font-press-start-2p)' }}
+                                className={`relative transition-colors font-bold text-[10px] uppercase tracking-wider group py-2 px-3 rounded-md border flex items-center gap-2 ${isRouteActive('/mygames') ? 'text-white bg-primary-500/25 border-primary-500/60 shadow-[0_0_14px_rgba(255,66,0,0.45)]' : 'text-gray-300 hover:text-white border-transparent hover:bg-white/5'}`}
+                            >
+                                <i className={`pi pi-th-large text-white text-lg transition-all duration-300 group-hover:scale-125 group-hover:rotate-12 group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.8)] ${isRouteActive('/mygames') ? 'scale-125 text-primary-400 drop-shadow-[0_0_12px_rgba(255,66,0,0.9)]' : ''}`}></i>
+                                <span>Mis juegos</span>
+                                <span className={`absolute bottom-0 left-0 h-1 bg-gradient-to-r from-primary-500 to-primary-400 transition-all duration-300 ease-out shadow-[0_0_12px_rgba(255,66,0,0.6)] ${isRouteActive('/mygames') ? 'w-full opacity-100' : 'w-0 opacity-0 group-hover:w-full group-hover:opacity-100'}`}></span>
+                            </Link>
+                        )}
                         
                     </div>
 
@@ -227,14 +231,16 @@ export default function Navbar() {
                                                     <i className="pi pi-search text-xs" />
                                                     <span>Buscar</span>
                                                 </Link>
-                                                <Link
-                                                    href="/mygames"
-                                                    onClick={() => setIsProfileMenuOpen(false)}
-                                                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm border transition-colors ${isRouteActive('/mygames') ? 'text-white bg-primary-500/30 border-primary-500/60 shadow-[0_0_10px_rgba(255,66,0,0.35)]' : 'text-gray-200 border-transparent hover:text-white hover:bg-white/10'}`}
-                                                >
-                                                    <i className="pi pi-gamepad text-xs" />
-                                                    <span>Mis Juegos</span>
-                                                </Link>
+                                                {!isViewer && (
+                                                    <Link
+                                                        href="/mygames"
+                                                        onClick={() => setIsProfileMenuOpen(false)}
+                                                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm border transition-colors ${isRouteActive('/mygames') ? 'text-white bg-primary-500/30 border-primary-500/60 shadow-[0_0_10px_rgba(255,66,0,0.35)]' : 'text-gray-200 border-transparent hover:text-white hover:bg-white/10'}`}
+                                                    >
+                                                        <i className="pi pi-gamepad text-xs" />
+                                                        <span>Mis Juegos</span>
+                                                    </Link>
+                                                )}
                                                 <Link
                                                     href="/profile"
                                                     onClick={() => setIsProfileMenuOpen(false)}
@@ -345,15 +351,17 @@ export default function Navbar() {
                                 Stores
                             </Link>
                         </div>
-                        <Link
-                            href="/mygames"
-                            onClick={() => setMobileMenuOpen(false)}
-                            style={{ fontFamily: 'var(--font-press-start-2p)' }}
-                            className={`p-4 text-xs rounded-lg border transition-colors font-bold flex items-center gap-3 group ${isRouteActive('/mygames') ? 'text-white bg-primary-500/35 border-primary-500/60 shadow-[0_0_12px_rgba(255,66,0,0.4)]' : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'}`}
-                        >
-                             <i className="pi pi-th-large text-white transition-all duration-300 group-hover:scale-125 group-hover:text-primary-400"></i>
-                            Juegos
-                        </Link>
+                        {!isViewer && (
+                            <Link
+                                href="/mygames"
+                                onClick={() => setMobileMenuOpen(false)}
+                                style={{ fontFamily: 'var(--font-press-start-2p)' }}
+                                className={`p-4 text-xs rounded-lg border transition-colors font-bold flex items-center gap-3 group ${isRouteActive('/mygames') ? 'text-white bg-primary-500/35 border-primary-500/60 shadow-[0_0_12px_rgba(255,66,0,0.4)]' : 'text-gray-300 border-transparent hover:text-white hover:bg-white/5'}`}
+                            >
+                                 <i className="pi pi-th-large text-white transition-all duration-300 group-hover:scale-125 group-hover:text-primary-400"></i>
+                                Juegos
+                            </Link>
+                        )}
                     </div>
 
                     <div className="mt-auto mb-8 px-4">

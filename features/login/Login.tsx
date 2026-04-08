@@ -64,8 +64,8 @@ export default function Login() {
                 const token = user?.token || user?.Token;
 
                 if (token) {
-                    localStorage.setItem('token', token);
-                    sessionStorage.removeItem('token');
+                    sessionStorage.setItem('token', token);
+                    localStorage.removeItem('token');
                 }
 
 

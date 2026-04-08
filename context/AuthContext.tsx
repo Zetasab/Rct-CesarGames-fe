@@ -57,7 +57,9 @@ const getPersistedAuth = (): { user: User | null; isAuthenticated: boolean } => 
         return { user: null, isAuthenticated: false };
     }
 
-    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+    const sessionUser = sessionStorage.getItem('user');
+    const localUser = localStorage.getItem('user');
+    const storedUser = sessionUser || localUser;
     if (!storedUser) {
         return { user: null, isAuthenticated: false };
     }
@@ -70,10 +72,10 @@ const getPersistedAuth = (): { user: User | null; isAuthenticated: boolean } => 
             return { user: null, isAuthenticated: false };
         }
 
-        localStorage.setItem('user', JSON.stringify(toPersistedAuthUser(normalizedUser)));
-        localStorage.setItem('token', normalizedUser.token);
-        sessionStorage.removeItem('user');
-        sessionStorage.removeItem('token');
+        sessionStorage.setItem('user', JSON.stringify(toPersistedAuthUser(normalizedUser)));
+        sessionStorage.setItem('token', normalizedUser.token);
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
 
         return { user: normalizedUser, isAuthenticated: true };
     } catch (error) {
@@ -104,12 +106,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const token = normalizedUser.token;
         const persistedUser = toPersistedAuthUser(normalizedUser);
 
-        localStorage.setItem('user', JSON.stringify(persistedUser));
+        sessionStorage.setItem('user', JSON.stringify(persistedUser));
         if (token) {
-            localStorage.setItem('token', token);
+            sessionStorage.setItem('token', token);
         }
-        sessionStorage.removeItem('user');
-        sessionStorage.removeItem('token');
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
         setUser(normalizedUser);
         setIsAuthenticated(true);
         setLoading(false);

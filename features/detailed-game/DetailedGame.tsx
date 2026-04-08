@@ -15,6 +15,8 @@ import { useRouter } from 'next/navigation';
 import GameCarousel, { GameCard, GameCardSkeleton } from '@/components/game-carousel/GameCarousel';
 import { Skeleton } from 'primereact/skeleton';
 import { extractErrorMessage } from '@/services/api-error';
+import { useAuth } from '@/context/AuthContext';
+import { isViewerUser } from '@/services/user-role';
 
 const getRatingColor = (title: string) => {
     switch (title.toLowerCase()) {
@@ -33,6 +35,8 @@ interface Props {
 type ToastType = 'success' | 'error';
 
 export default function DetailedGame({ gameSlug }: Props) {
+    const { user } = useAuth();
+    const allowStatusActions = !isViewerUser(user);
     const [game, setGame] = useState<Game | null>(null);
     const [movies, setMovies] = useState<Movie[]>([]);
     const [seriesGames, setSeriesGames] = useState<Game[]>([]);
@@ -186,7 +190,12 @@ export default function DetailedGame({ gameSlug }: Props) {
                 setSeriesGames(seriesData?.results || []);
                 setSuggestedGames(suggestedData?.results || []);
 
-                await loadGameResultState(gameData.id);
+                if (allowStatusActions) {
+                    await loadGameResultState(gameData.id);
+                } else {
+                    setIsPlayed(false);
+                    setIsWishlist(false);
+                }
             } catch (error) {
                 console.error("Error loading game data:", error);
             } finally {
@@ -194,7 +203,7 @@ export default function DetailedGame({ gameSlug }: Props) {
             }
         };
         loadGame();
-    }, [gameSlug]);
+    }, [allowStatusActions, gameSlug]);
 
     if (loading) return (
         <div className="min-h-screen bg-[#151515] text-white pt-10">
@@ -293,32 +302,34 @@ export default function DetailedGame({ gameSlug }: Props) {
                             )}
                         </div>
 
-                        <div className="flex items-center gap-3 mt-4">
-                            <button
-                                onClick={handleTogglePlayed}
-                                disabled={isUpdatingPlayed}
-                                className={`w-10 h-10 rounded-full text-white flex items-center justify-center backdrop-blur-md transition-all border ${
-                                    isPlayed
-                                        ? 'bg-green-600 border-transparent'
-                                        : 'bg-white/10 hover:bg-green-600 border-white/10 hover:border-transparent hover:scale-110'
-                                } ${isUpdatingPlayed ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
-                                title={isPlayed ? 'Jugado' : 'Marcar como Jugado'}
-                            >
-                                <i className="pi pi-check text-lg"></i>
-                            </button>
-                            <button
-                                onClick={handleToggleWishlist}
-                                disabled={isUpdatingWishlist}
-                                className={`w-10 h-10 rounded-full text-white flex items-center justify-center backdrop-blur-md transition-all border ${
-                                    isWishlist
-                                        ? 'bg-blue-600 border-transparent'
-                                        : 'bg-white/10 hover:bg-blue-600 border-white/10 hover:border-transparent hover:scale-110'
-                                } ${isUpdatingWishlist ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
-                                title={isWishlist ? 'Previsto' : 'Añadir a Previstos'}
-                            >
-                                <i className="pi pi-clock text-lg"></i>
-                            </button>
-                        </div>
+                        {allowStatusActions && (
+                            <div className="flex items-center gap-3 mt-4">
+                                <button
+                                    onClick={handleTogglePlayed}
+                                    disabled={isUpdatingPlayed}
+                                    className={`w-10 h-10 rounded-full text-white flex items-center justify-center backdrop-blur-md transition-all border ${
+                                        isPlayed
+                                            ? 'bg-green-600 border-transparent'
+                                            : 'bg-white/10 hover:bg-green-600 border-white/10 hover:border-transparent hover:scale-110'
+                                    } ${isUpdatingPlayed ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
+                                    title={isPlayed ? 'Jugado' : 'Marcar como Jugado'}
+                                >
+                                    <i className="pi pi-check text-lg"></i>
+                                </button>
+                                <button
+                                    onClick={handleToggleWishlist}
+                                    disabled={isUpdatingWishlist}
+                                    className={`w-10 h-10 rounded-full text-white flex items-center justify-center backdrop-blur-md transition-all border ${
+                                        isWishlist
+                                            ? 'bg-blue-600 border-transparent'
+                                            : 'bg-white/10 hover:bg-blue-600 border-white/10 hover:border-transparent hover:scale-110'
+                                    } ${isUpdatingWishlist ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:scale-105'}`}
+                                    title={isWishlist ? 'Previsto' : 'Añadir a Previstos'}
+                                >
+                                    <i className="pi pi-clock text-lg"></i>
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

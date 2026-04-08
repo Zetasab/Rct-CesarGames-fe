@@ -63,7 +63,9 @@ export class BaseService {
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`API Error: ${response.status} ${response.statusText}`, errorText);
-            const parsedErrorMessage = extractMessageFromApiBody(errorText);
+            const parsedErrorMessage = response.status === 403
+                ? 'No tienes permisos'
+                : extractMessageFromApiBody(errorText);
             const error = new Error(parsedErrorMessage || `API Error: ${response.status}`) as Error & { status?: number; rawBody?: string };
             error.status = response.status;
             error.rawBody = errorText;

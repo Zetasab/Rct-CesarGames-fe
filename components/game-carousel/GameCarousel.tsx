@@ -8,6 +8,8 @@ import { Skeleton } from 'primereact/skeleton';
 import { Toast } from 'primereact/toast';
 import { gameResultService } from '@/services/GameResultService';
 import { extractErrorMessage } from '@/services/api-error';
+import { useAuth } from '@/context/AuthContext';
+import { isViewerUser } from '@/services/user-role';
 import {
     findGameResultByGameId,
     getGameResultFlags,
@@ -68,6 +70,7 @@ export const GameCard = memo(({
     mobileExtraActions,
     desktopHoverActions,
     hoverTitleMeta,
+    allowStatusActions = true,
 }: { 
     game: Game; 
     openMenuId: number | null; 
@@ -85,6 +88,7 @@ export const GameCard = memo(({
     mobileExtraActions?: ReactNode;
     desktopHoverActions?: ReactNode;
     hoverTitleMeta?: ReactNode;
+    allowStatusActions?: boolean;
 }) => {
     const [isHovered, setIsHovered] = useState(false);
     const [slideshowActive, setSlideshowActive] = useState(false);
@@ -108,6 +112,12 @@ export const GameCard = memo(({
     };
 
     useEffect(() => {
+        if (!allowStatusActions) {
+            setIsPlayed(false);
+            setIsWishlist(false);
+            return;
+        }
+
         if (typeof initialIsPlayed === 'boolean' || typeof initialIsWishlist === 'boolean') {
             setIsPlayed(Boolean(initialIsPlayed));
             setIsWishlist(Boolean(initialIsWishlist));
@@ -129,7 +139,7 @@ export const GameCard = memo(({
         };
 
         loadGameResultState();
-    }, [game.id, initialIsPlayed, initialIsWishlist]);
+    }, [allowStatusActions, game.id, initialIsPlayed, initialIsWishlist]);
 
     useEffect(() => {
         return () => {
@@ -189,6 +199,10 @@ export const GameCard = memo(({
 
     const handleTogglePlayed = async (e: MouseEvent) => {
         e.stopPropagation();
+        if (!allowStatusActions) {
+            return;
+        }
+
         if (isUpdatingPlayed || globalStatusLoading) {
             return;
         }
@@ -219,6 +233,10 @@ export const GameCard = memo(({
 
     const handleToggleWishlist = async (e: MouseEvent) => {
         e.stopPropagation();
+        if (!allowStatusActions) {
+            return;
+        }
+
         if (isUpdatingWishlist || globalStatusLoading) {
             return;
         }
@@ -347,32 +365,37 @@ export const GameCard = memo(({
                 {/* Desktop Actions (Hover) */}
                 <div className="hidden md:flex absolute top-2 right-2 gap-2 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 z-30">
                     {desktopHoverActions}
-                    <button 
-                        className={`w-8 h-8 rounded-full text-white flex items-center justify-center backdrop-blur-sm transition-all hover:scale-105 cursor-pointer ${
-                            isPlayed ? 'bg-green-600' : 'bg-black/60 hover:bg-green-600'
-                        } ${isStatusLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        title={isPlayed ? 'Jugado' : 'Jugado'}
-                        disabled={isStatusLoading}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={handleTogglePlayed}
-                    >
-                        <i className={`pi ${isStatusLoading ? 'pi-spin pi-spinner' : 'pi-check'} text-xs`}></i>
-                    </button>
-                    <button 
-                        className={`w-8 h-8 rounded-full text-white flex items-center justify-center backdrop-blur-sm transition-all hover:scale-105 cursor-pointer ${
-                            isWishlist ? 'bg-blue-600' : 'bg-black/60 hover:bg-blue-600'
-                        } ${isStatusLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
-                        title={isWishlist ? 'Previsto' : 'Previsto'}
-                        disabled={isStatusLoading}
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={handleToggleWishlist}
-                    >
-                        <i className={`pi ${isStatusLoading ? 'pi-spin pi-spinner' : 'pi-clock'} text-xs`}></i>
-                    </button>
+                    {allowStatusActions && (
+                        <>
+                            <button 
+                                className={`w-8 h-8 rounded-full text-white flex items-center justify-center backdrop-blur-sm transition-all hover:scale-105 cursor-pointer ${
+                                    isPlayed ? 'bg-green-600' : 'bg-black/60 hover:bg-green-600'
+                                } ${isStatusLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                title={isPlayed ? 'Jugado' : 'Jugado'}
+                                disabled={isStatusLoading}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={handleTogglePlayed}
+                            >
+                                <i className={`pi ${isStatusLoading ? 'pi-spin pi-spinner' : 'pi-check'} text-xs`}></i>
+                            </button>
+                            <button 
+                                className={`w-8 h-8 rounded-full text-white flex items-center justify-center backdrop-blur-sm transition-all hover:scale-105 cursor-pointer ${
+                                    isWishlist ? 'bg-blue-600' : 'bg-black/60 hover:bg-blue-600'
+                                } ${isStatusLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                title={isWishlist ? 'Previsto' : 'Previsto'}
+                                disabled={isStatusLoading}
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={handleToggleWishlist}
+                            >
+                                <i className={`pi ${isStatusLoading ? 'pi-spin pi-spinner' : 'pi-clock'} text-xs`}></i>
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 {/* Mobile Actions (Menu) */}
-                <div className="md:hidden absolute top-2 right-2 z-[60]">
+                {(allowStatusActions || mobileExtraActions) && (
+                    <div className="md:hidden absolute top-2 right-2 z-[60]">
                     <button 
                         className="relative z-[61] w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center backdrop-blur-sm transition-all hover:scale-105 active:bg-neutral-700 cursor-pointer"
                         onClick={(e) => toggleMenu(e, game.id)}
@@ -387,35 +410,40 @@ export const GameCard = memo(({
                             onMouseDown={(e) => e.stopPropagation()}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <button
-                                className={`flex items-center gap-3 px-4 py-3 text-sm text-left transition-all hover:translate-x-[1px] cursor-pointer ${
-                                    isPlayed
-                                        ? 'bg-green-600 text-white hover:bg-green-500'
-                                        : 'text-gray-200 hover:bg-white/10'
-                                } ${isStatusLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
-                                disabled={isStatusLoading}
-                                onClick={handleTogglePlayed}
-                            >
-                                <i className={`pi ${isStatusLoading ? 'pi-spin pi-spinner' : 'pi-check'} text-xs ${isPlayed ? 'text-white' : 'text-green-500'}`}></i>
-                                Jugado
-                            </button>
-                            <div className="h-[1px] bg-gray-700 mx-2"></div>
-                            <button
-                                className={`flex items-center gap-3 px-4 py-3 text-sm text-left transition-all hover:translate-x-[1px] cursor-pointer ${
-                                    isWishlist
-                                        ? 'bg-blue-600 text-white hover:bg-blue-500'
-                                        : 'text-gray-200 hover:bg-white/10'
-                                } ${isStatusLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
-                                disabled={isStatusLoading}
-                                onClick={handleToggleWishlist}
-                            >
-                                <i className={`pi ${isStatusLoading ? 'pi-spin pi-spinner' : 'pi-clock'} text-xs ${isWishlist ? 'text-white' : 'text-blue-500'}`}></i>
-                                Previsto
-                            </button>
+                            {allowStatusActions && (
+                                <>
+                                    <button
+                                        className={`flex items-center gap-3 px-4 py-3 text-sm text-left transition-all hover:translate-x-[1px] cursor-pointer ${
+                                            isPlayed
+                                                ? 'bg-green-600 text-white hover:bg-green-500'
+                                                : 'text-gray-200 hover:bg-white/10'
+                                        } ${isStatusLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                        disabled={isStatusLoading}
+                                        onClick={handleTogglePlayed}
+                                    >
+                                        <i className={`pi ${isStatusLoading ? 'pi-spin pi-spinner' : 'pi-check'} text-xs ${isPlayed ? 'text-white' : 'text-green-500'}`}></i>
+                                        Jugado
+                                    </button>
+                                    <div className="h-[1px] bg-gray-700 mx-2"></div>
+                                    <button
+                                        className={`flex items-center gap-3 px-4 py-3 text-sm text-left transition-all hover:translate-x-[1px] cursor-pointer ${
+                                            isWishlist
+                                                ? 'bg-blue-600 text-white hover:bg-blue-500'
+                                                : 'text-gray-200 hover:bg-white/10'
+                                        } ${isStatusLoading ? 'opacity-60 cursor-not-allowed' : ''}`}
+                                        disabled={isStatusLoading}
+                                        onClick={handleToggleWishlist}
+                                    >
+                                        <i className={`pi ${isStatusLoading ? 'pi-spin pi-spinner' : 'pi-clock'} text-xs ${isWishlist ? 'text-white' : 'text-blue-500'}`}></i>
+                                        Previsto
+                                    </button>
+                                </>
+                            )}
                             {mobileExtraActions}
                         </div>
                     )}
-                </div>
+                    </div>
+                )}
 
                 {/* Rating Badge */}
                 <div className="absolute top-3 left-0 bg-[#333]/80 backdrop-blur-sm text-white text-xs font-bold px-2 py-1 rounded-r shadow-md z-20 flex items-center gap-1">
@@ -460,6 +488,8 @@ export default function GameCarousel({
     cardClassName,
     cardMediaClassName,
 }: GameCarouselProps) {
+    const { user } = useAuth();
+    const allowStatusActions = !isViewerUser(user);
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
     const hasDragged = useRef(false);
@@ -550,6 +580,7 @@ export default function GameCarousel({
                             onGlobalStatusLoadingChange={onGlobalStatusLoadingChange}
                             className={cardClassName}
                             mediaClassName={cardMediaClassName}
+                            allowStatusActions={allowStatusActions}
                         />
                     );
                 })}

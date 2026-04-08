@@ -26,6 +26,7 @@ import {
 } from "@/services/GameResultState";
 import { authService } from "@/services/AuthService";
 import { useAuth } from "@/context/AuthContext";
+import { isViewerUser } from "@/services/user-role";
 
 type GameStatusFlags = { isPlayed: boolean; isWishlist: boolean };
 type SelectOption = { label: string; value: string };
@@ -50,7 +51,8 @@ const ORDERING_OPTIONS: Array<{ label: string; value: string }> = [
 ];
 
 export default function Search() {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
+    const allowStatusActions = !isViewerUser(user);
     const router = useRouter();
     const pathname = usePathname();
     const hasInitializedAutoSearch = useRef(false);
@@ -619,6 +621,7 @@ export default function Search() {
                                             globalStatusLoading={isStatusLoading}
                                             onGlobalStatusLoadingChange={setIsStatusLoading}
                                             className="w-full max-w-[280px] lg:w-[500px] lg:max-w-[500px]"
+                                            allowStatusActions={allowStatusActions}
                                         />
                                     );
                                 })}

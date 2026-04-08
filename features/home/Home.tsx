@@ -11,6 +11,7 @@ import Link from "next/link";
 import { MouseEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "primereact/skeleton";
+import { isViewerUser } from "@/services/user-role";
 import {
     getGameResultFlags,
     getGameResultGameId,
@@ -387,6 +388,7 @@ function HomeGamesSection({
     gameStatusById,
     onGameStatusChange,
     onChangeView,
+    allowStatusActions,
 }: {
     sectionKey: SectionKey;
     title: string;
@@ -396,6 +398,7 @@ function HomeGamesSection({
     gameStatusById: Record<string, GameStatusFlags>;
     onGameStatusChange: (gameId: number, next: GameStatusFlags) => void;
     onChangeView: (section: SectionKey, mode: ViewMode) => void;
+    allowStatusActions: boolean;
 }) {
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
 
@@ -477,6 +480,7 @@ function HomeGamesSection({
                                             initialIsPlayed={status?.isPlayed}
                                             initialIsWishlist={status?.isWishlist}
                                             onStatusChange={onGameStatusChange}
+                                            allowStatusActions={allowStatusActions}
                                         />
                                     </div>
                                 );
@@ -584,7 +588,8 @@ function CatalogTabsSection({
 }
 
 export default function Home() {
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
+    const allowStatusActions = !isViewerUser(user);
     const [trendingGames, setTrendingGames] = useState<Game[]>([]);
     const [topRatedGames, setTopRatedGames] = useState<Game[]>([]);
     const [newReleaseGames, setNewReleaseGames] = useState<Game[]>([]);
@@ -852,6 +857,7 @@ export default function Home() {
                     gameStatusById={gameStatusById}
                     onGameStatusChange={handleGameStatusChange}
                     onChangeView={handleChangeSectionView}
+                    allowStatusActions={allowStatusActions}
                 />
                 {/* <SectionDivider label="Radar visual" />
                 <SpotlightMosaic games={visualShowcaseGames} onOpenGame={(gameId) => router.push(`/game/${gameId}`)} /> */}
@@ -867,6 +873,7 @@ export default function Home() {
                     gameStatusById={gameStatusById}
                     onGameStatusChange={handleGameStatusChange}
                     onChangeView={handleChangeSectionView}
+                    allowStatusActions={allowStatusActions}
                 />
                   <SectionDivider label="Tabs destacados" />
                 <HomeTabsShowcase tabs={homeTabs} />
@@ -919,6 +926,7 @@ export default function Home() {
                     gameStatusById={gameStatusById}
                     onGameStatusChange={handleGameStatusChange}
                     onChangeView={handleChangeSectionView}
+                    allowStatusActions={allowStatusActions}
                 />
                 <HomeGamesSection
                     sectionKey="upcomingAnticipated"
@@ -929,6 +937,7 @@ export default function Home() {
                     gameStatusById={gameStatusById}
                     onGameStatusChange={handleGameStatusChange}
                     onChangeView={handleChangeSectionView}
+                    allowStatusActions={allowStatusActions}
                 />
 
                 <CatalogTabsSection
@@ -948,6 +957,7 @@ export default function Home() {
                     gameStatusById={gameStatusById}
                     onGameStatusChange={handleGameStatusChange}
                     onChangeView={handleChangeSectionView}
+                    allowStatusActions={allowStatusActions}
                 />
             </div>
 
