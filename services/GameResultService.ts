@@ -1,6 +1,7 @@
 import { BaseService } from './BaseService';
 import { GamePlatform, GameResultModel, normalizeGamePlatform } from '@/models/GameResultModel';
 import { extractMessageFromApiBody, isDailyLimitErrorMessage } from './api-error';
+import { getBaseUrl } from './config';
 
 export interface GameResultFilterResponse {
     results: GameResultModel[];
@@ -37,6 +38,34 @@ class GameResultService extends BaseService {
 
     async getById(id: string): Promise<GameResultModel> {
         return this.get<GameResultModel>(`/getById/${encodeURIComponent(id)}`);
+    }
+
+    async getPlayedGamesIdsList(): Promise<string[]> {
+        const response = await fetch(`${getBaseUrl()}/api/games/PlayedGames/ids`, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        const result = await this.handleResponse<unknown>(response);
+        return Array.isArray(result)
+            ? result
+                .map((item) => String(item ?? '').trim())
+                .filter((item) => item.length > 0)
+            : [];
+    }
+
+    async getWishlistGamesIdsList(): Promise<string[]> {
+        const response = await fetch(`${getBaseUrl()}/api/games/WishlistGames/ids`, {
+            method: 'GET',
+            headers: this.getHeaders(),
+        });
+
+        const result = await this.handleResponse<unknown>(response);
+        return Array.isArray(result)
+            ? result
+                .map((item) => String(item ?? '').trim())
+                .filter((item) => item.length > 0)
+            : [];
     }
 
     async search(q?: string, skip: number = 0, take: number = 50): Promise<GameResultModel[]> {
@@ -99,20 +128,40 @@ class GameResultService extends BaseService {
         return this.put<string>(`/update?id=${encodeURIComponent(id)}`, model);
     }
 
-    async setGameAsPlayed(model: GameResultModel): Promise<boolean> {
-        return this.put<boolean>('/setGameAsPlayed', model);
+    async setGameAsPlayed(gameMongoId: string | number): Promise<boolean> {
+        return this.addSavedGame('PlayedGames', gameMongoId);
     }
 
-    async setGameAsNotPlayed(gameId: number | string): Promise<string> {
-        return this.put<string>(`/setGameAsNotPlayed/${gameId}`, {});
+    async setGameAsNotPlayed(gameMongoId: string | number): Promise<string> {
+        return this.deleteSavedGame('PlayedGames', gameMongoId);
     }
 
-    async setGameAsWishlist(model: GameResultModel): Promise<boolean> {
-        return this.put<boolean>('/setGameAsWishlist', model);
+    async setGameAsWishlist(gameMongoId: string | number): Promise<boolean> {
+        return this.addSavedGame('WishlistGames', gameMongoId);
     }
 
-    async setGameAsNotWishlist(gameId: number | string): Promise<string> {
-        return this.put<string>(`/setGameAsNotWishlist/${gameId}`, {});
+    async setGameAsNotWishlist(gameMongoId: string | number): Promise<string> {
+        return this.deleteSavedGame('WishlistGames', gameMongoId);
+    }
+
+    private async addSavedGame(collection: 'PlayedGames' | 'WishlistGames', gameMongoId: string | number): Promise<boolean> {
+        const response = await fetch(`${getBaseUrl()}/api/games/${collection}/${encodeURIComponent(String(gameMongoId))}`, {
+            method: 'POST',
+            headers: this.getHeaders(),
+        });
+
+        await this.handleResponse<unknown>(response);
+        return true;
+    }
+
+    private async deleteSavedGame(collection: 'PlayedGames' | 'WishlistGames', id: number | string): Promise<string> {
+        const response = await fetch(`${getBaseUrl()}/api/games/${collection}/${encodeURIComponent(String(id))}`, {
+            method: 'DELETE',
+            headers: this.getHeaders(),
+        });
+
+        await this.handleResponse<unknown>(response);
+        return 'ok';
     }
 
     async setPriority(gameId: number | string): Promise<string> {

@@ -14,7 +14,6 @@ import {
     loadGameResultList,
     updateCachedGameResultFlags,
 } from '@/services/GameResultState';
-import { GamePlatform, GameResultModel } from '@/models/GameResultModel';
 
 interface GameCarouselProps {
     title: string;
@@ -202,20 +201,7 @@ export const GameCard = memo(({
                 onStatusChange?.(game.id, { isPlayed: false, isWishlist });
                 showToast('Juego quitado de jugados correctamente.', 'success');
             } else {
-                const responseGame: GameResultModel = {
-                    game_id: game.id,
-                    IsPlayed: true,
-                    IsWishlist: isWishlist,
-                    IsBought: false,
-                    gamePlaform: GamePlatform.None,
-                    Priority: isPriority,
-                    name: game.name,
-                    released: game.released,
-                    tba: game.tba,
-                    background_image: game.background_image,
-                    rating: game.rating,
-                };
-                await gameResultService.setGameAsPlayed(responseGame);
+                await gameResultService.setGameAsPlayed(game.id);
                 setIsPlayed(true);
                 updateCachedGameResultFlags(game.id, { isPlayed: true });
                 onStatusChange?.(game.id, { isPlayed: true, isWishlist });
@@ -245,20 +231,7 @@ export const GameCard = memo(({
                 onStatusChange?.(game.id, { isPlayed, isWishlist: false });
                 showToast('Juego quitado de previstos correctamente.', 'success');
             } else {
-                const responseGame: GameResultModel = {
-                    IsPlayed: isPlayed,
-                    IsWishlist: true,
-                    IsBought: false,
-                    gamePlaform: GamePlatform.None,
-                    Priority: isPriority,
-                    game_id: game.id,
-                    name: game.name,
-                    released: game.released,
-                    tba: game.tba,
-                    background_image: game.background_image,
-                    rating: game.rating,
-                };
-                await gameResultService.setGameAsWishlist(responseGame);
+                await gameResultService.setGameAsWishlist(game.id);
                 setIsWishlist(true);
                 updateCachedGameResultFlags(game.id, { isWishlist: true });
                 onStatusChange?.(game.id, { isPlayed, isWishlist: true });

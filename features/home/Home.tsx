@@ -11,6 +11,11 @@ import Link from "next/link";
 import { MouseEvent, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Skeleton } from "primereact/skeleton";
+import {
+    getGameResultFlags,
+    getGameResultGameId,
+    loadGameResultList,
+} from "@/services/GameResultState";
 import type {
     GenreCatalogItem,
     PlatformCatalogItem,
@@ -716,6 +721,23 @@ export default function Home() {
                         ordering: "-added",
                     }),
                 ]);
+
+                try {
+                    const savedGames = await loadGameResultList(true);
+                    const nextStatusById = savedGames.reduce<Record<string, GameStatusFlags>>((acc, item) => {
+                        const gameId = getGameResultGameId(item);
+                        if (!gameId) {
+                            return acc;
+                        }
+
+                        acc[gameId] = getGameResultFlags(item);
+                        return acc;
+                    }, {});
+
+                    setGameStatusById(nextStatusById);
+                } catch {
+                    setGameStatusById({});
+                }
 
                 console.log(trendingData);
 

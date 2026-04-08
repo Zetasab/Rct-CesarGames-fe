@@ -100,10 +100,42 @@ export const loadGameResultList = async (forceRefresh: boolean = false): Promise
     }
 
     if (!gameResultsRequest) {
-        gameResultsRequest = gameResultService
-            .getAll()
-            .then((results) => {
-                cachedGameResults = Array.isArray(results) ? results : [];
+        gameResultsRequest = Promise.all([
+            gameResultService.getPlayedGamesIdsList(),
+            gameResultService.getWishlistGamesIdsList(),
+        ])
+            .then(([playedIds, wishlistIds]) => {
+                const mergedByGameId: Record<string, GameResultModel> = {};
+
+                const upsert = (gameId: string, flags: { isPlayed?: boolean; isWishlist?: boolean }) => {
+                    const current = mergedByGameId[gameId] as unknown as Record<string, unknown> | undefined;
+                    const nextRecord: Record<string, unknown> = {
+                        ...(current || {}),
+                        game_id: gameId,
+                    };
+
+                    if (typeof flags.isPlayed === 'boolean') {
+                        nextRecord.IsPlayed = flags.isPlayed;
+                        nextRecord.isPlayed = flags.isPlayed;
+                    }
+
+                    if (typeof flags.isWishlist === 'boolean') {
+                        nextRecord.IsWishlist = flags.isWishlist;
+                        nextRecord.isWishlist = flags.isWishlist;
+                    }
+
+                    mergedByGameId[gameId] = nextRecord as unknown as GameResultModel;
+                };
+
+                for (const gameId of Array.isArray(playedIds) ? playedIds : []) {
+                    upsert(String(gameId), { isPlayed: true });
+                }
+
+                for (const gameId of Array.isArray(wishlistIds) ? wishlistIds : []) {
+                    upsert(String(gameId), { isWishlist: true });
+                }
+
+                cachedGameResults = Object.values(mergedByGameId);
                 return cachedGameResults;
             })
             .catch((error) => {

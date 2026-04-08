@@ -16,7 +16,7 @@ export class BaseService {
         return this.handleResponse<T>(response);
     }
 
-    protected async post<T>(path: string = '', body: any): Promise<T> {
+    protected async post<T>(path: string = '', body: unknown): Promise<T> {
         const response = await fetch(`${this.baseUrl}${path}`, {
             method: 'POST',
             headers: this.getHeaders(),
@@ -25,7 +25,7 @@ export class BaseService {
         return this.handleResponse<T>(response);
     }
 
-    protected async put<T>(path: string = '', body: any): Promise<T> {
+    protected async put<T>(path: string = '', body: unknown): Promise<T> {
         const response = await fetch(`${this.baseUrl}${path}`, {
             method: 'PUT',
             headers: this.getHeaders(),
@@ -42,7 +42,7 @@ export class BaseService {
         return this.handleResponse<T>(response);
     }
 
-    private getHeaders(): HeadersInit {
+    protected getHeaders(): HeadersInit {
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
             'X-Tracking-Sensitive-Consent': 'accepted',

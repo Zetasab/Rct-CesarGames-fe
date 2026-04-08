@@ -13,7 +13,6 @@ import Image from 'next/image';
 import 'primeicons/primeicons.css';
 import { useRouter } from 'next/navigation';
 import GameCarousel, { GameCard, GameCardSkeleton } from '@/components/game-carousel/GameCarousel';
-import { GamePlatform, GameResultModel } from '@/models/GameResultModel';
 import { Skeleton } from 'primereact/skeleton';
 import { extractErrorMessage } from '@/services/api-error';
 
@@ -95,20 +94,7 @@ export default function DetailedGame({ gameSlug }: Props) {
                 updateCachedGameResultFlags(game.id, { isPlayed: false });
                 showToast('Juego quitado de jugados correctamente.', 'success');
             } else {
-                const responseGame: GameResultModel = {
-                    game_id: game.id,
-                    IsPlayed: true,
-                    IsWishlist: isWishlist,
-                    IsBought: false,
-                    gamePlaform: GamePlatform.None,
-                    Priority: Boolean(game.Priority),
-                    name: game.name,
-                    released: game.released,
-                    tba: game.tba,
-                    background_image: game.background_image,
-                    rating: game.rating,
-                };
-                await gameResultService.setGameAsPlayed(responseGame);
+                await gameResultService.setGameAsPlayed(game.id);
                 setIsPlayed(true);
                 updateCachedGameResultFlags(game.id, { isPlayed: true });
                 showToast('Juego marcado como jugado correctamente.', 'success');
@@ -133,20 +119,7 @@ export default function DetailedGame({ gameSlug }: Props) {
                 updateCachedGameResultFlags(game.id, { isWishlist: false });
                 showToast('Juego quitado de previstos correctamente.', 'success');
             } else {
-                const responseGame: GameResultModel = {
-                    game_id: game.id,
-                    IsPlayed: isPlayed,
-                    IsWishlist: true,
-                    IsBought: false,
-                    gamePlaform: GamePlatform.None,
-                    Priority: Boolean(game.Priority),
-                    name: game.name,
-                    released: game.released,
-                    tba: game.tba,
-                    background_image: game.background_image,
-                    rating: game.rating,
-                };
-                await gameResultService.setGameAsWishlist(responseGame);
+                await gameResultService.setGameAsWishlist(game.id);
                 setIsWishlist(true);
                 updateCachedGameResultFlags(game.id, { isWishlist: true });
                 showToast('Juego añadido a previstos correctamente.', 'success');

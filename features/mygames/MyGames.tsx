@@ -19,6 +19,11 @@ import { MultiSelect, MultiSelectChangeEvent } from "primereact/multiselect";
 import { Paginator, PaginatorPageChangeEvent } from "primereact/paginator";
 import { Toast } from "primereact/toast";
 import { extractErrorMessage } from "@/services/api-error";
+import {
+    getGameResultFlags,
+    getGameResultGameId,
+    loadGameResultList,
+} from "@/services/GameResultState";
 
 const PAGE_SIZE = 40;
 const STORAGE_KEYS = {
@@ -254,6 +259,17 @@ export default function MyGames() {
         setOpenMenuId(null);
 
         try {
+            const savedGames = await loadGameResultList();
+            const savedStatusByGameId = savedGames.reduce<Record<string, { isPlayed: boolean; isWishlist: boolean }>>((acc, item) => {
+                const gameId = getGameResultGameId(item);
+                if (!gameId) {
+                    return acc;
+                }
+
+                acc[gameId] = getGameResultFlags(item);
+                return acc;
+            }, {});
+
             const filteredResults = await gameResultService.filter(
                 name.trim() || undefined,
                 statusMode === "played" ? true : statusMode === "wishlist" ? false : true,
@@ -322,6 +338,10 @@ export default function MyGames() {
                     rawIsWishlist === 1 ||
                     String(rawIsWishlist ?? '').trim().toLowerCase() === 'true';
 
+                const savedFlags = savedStatusByGameId[String(gameId)];
+                const effectiveIsPlayed = typeof savedFlags?.isPlayed === "boolean" ? savedFlags.isPlayed : parsedIsPlayed;
+                const effectiveIsWishlist = typeof savedFlags?.isWishlist === "boolean" ? savedFlags.isWishlist : parsedIsWishlist;
+
                 const parsedIsBought =
                     rawIsBought === true ||
                     rawIsBought === 1 ||
@@ -333,8 +353,8 @@ export default function MyGames() {
                     String(rawIsMultiplayer ?? '').trim().toLowerCase() === 'true';
 
                 nextPriorityByGameId[gameId] = isPriority;
-                nextIsPlayedByGameId[gameId] = parsedIsPlayed;
-                nextIsWishlistByGameId[gameId] = parsedIsWishlist;
+                nextIsPlayedByGameId[gameId] = effectiveIsPlayed;
+                nextIsWishlistByGameId[gameId] = effectiveIsWishlist;
                 nextIsBoughtByGameId[gameId] = parsedIsBought;
                 nextIsMultiplayerByGameId[gameId] = parsedIsMultiplayer;
                 nextPlatformByGameId[gameId] = normalizeGamePlatform(rawPlatform);

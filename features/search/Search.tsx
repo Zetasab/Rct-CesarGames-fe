@@ -145,7 +145,7 @@ export default function Search() {
 
     const loadGameStatuses = useCallback(async () => {
         try {
-            const list = await loadGameResultList();
+            const list = await loadGameResultList(true);
             const nextState = list.reduce<Record<string, GameStatusFlags>>((acc, item) => {
                 const gameId = getGameResultGameId(item);
                 if (!gameId) {
