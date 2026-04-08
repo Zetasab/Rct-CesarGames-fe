@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import GameCarousel, { GameCard, GameCardSkeleton } from '@/components/game-carousel/GameCarousel';
 import { GamePlatform, GameResultModel } from '@/models/GameResultModel';
 import { Skeleton } from 'primereact/skeleton';
+import { extractErrorMessage } from '@/services/api-error';
 
 const getRatingColor = (title: string) => {
     switch (title.toLowerCase()) {
@@ -112,8 +113,8 @@ export default function DetailedGame({ gameSlug }: Props) {
                 updateCachedGameResultFlags(game.id, { isPlayed: true });
                 showToast('Juego marcado como jugado correctamente.', 'success');
             }
-        } catch {
-            showToast('No se pudo actualizar el estado de jugado.', 'error');
+        } catch (error) {
+            showToast(extractErrorMessage(error, 'No se pudo actualizar el estado de jugado.'), 'error');
         } finally {
             setIsUpdatingPlayed(false);
         }
@@ -150,8 +151,8 @@ export default function DetailedGame({ gameSlug }: Props) {
                 updateCachedGameResultFlags(game.id, { isWishlist: true });
                 showToast('Juego añadido a previstos correctamente.', 'success');
             }
-        } catch {
-            showToast('No se pudo actualizar el estado de previstos.', 'error');
+        } catch (error) {
+            showToast(extractErrorMessage(error, 'No se pudo actualizar el estado de previstos.'), 'error');
         } finally {
             setIsUpdatingWishlist(false);
         }

@@ -18,6 +18,7 @@ import { Dropdown, DropdownChangeEvent } from "primereact/dropdown";
 import { MultiSelect, MultiSelectChangeEvent } from "primereact/multiselect";
 import { Paginator, PaginatorPageChangeEvent } from "primereact/paginator";
 import { Toast } from "primereact/toast";
+import { extractErrorMessage } from "@/services/api-error";
 
 const PAGE_SIZE = 40;
 const STORAGE_KEYS = {
@@ -364,7 +365,7 @@ export default function MyGames() {
             setIsBoughtByGameId(nextIsBoughtByGameId);
             setIsMultiplayerByGameId(nextIsMultiplayerByGameId);
             setPlatformByGameId(nextPlatformByGameId);
-        } catch {
+        } catch (error) {
             setGames([]);
             setPriorityByGameId({});
             setIsPlayedByGameId({});
@@ -372,7 +373,7 @@ export default function MyGames() {
             setIsBoughtByGameId({});
             setIsMultiplayerByGameId({});
             setPlatformByGameId({});
-            setError("No se pudieron cargar tus juegos con los filtros actuales.");
+            setError(extractErrorMessage(error, "No se pudieron cargar tus juegos con los filtros actuales."));
         } finally {
             setLoading(false);
         }
@@ -416,8 +417,8 @@ export default function MyGames() {
                         await gameResultService.setPriority(game.id);
                         setPriorityByGameId((current) => ({ ...current, [game.id]: true }));
                     }
-                } catch {
-                    setError("No se pudo actualizar la prioridad del juego.");
+                } catch (error) {
+                    setError(extractErrorMessage(error, "No se pudo actualizar la prioridad del juego."));
                 } finally {
                     setPriorityLoadingGameId(null);
                 }
@@ -488,8 +489,8 @@ export default function MyGames() {
                 detail: `Se cambió a ${getGamePlatformLabel(platform)}.`,
                 life: 2200,
             });
-        } catch {
-            setError("No se pudo actualizar la plataforma del juego.");
+        } catch (error) {
+            setError(extractErrorMessage(error, "No se pudo actualizar la plataforma del juego."));
         } finally {
             setPlatformLoadingByGameId((current) => ({ ...current, [gameId]: false }));
         }
@@ -512,12 +513,13 @@ export default function MyGames() {
                 await gameResultService.setBought(gameId);
                 setIsBoughtByGameId((current) => ({ ...current, [gameId]: true }));
             }
-        } catch {
-            setError(
+        } catch (error) {
+            setError(extractErrorMessage(
+                error,
                 isCurrentlyBought
                     ? "No se pudo quitar el juego de comprados."
                     : "No se pudo marcar el juego como comprado."
-            );
+            ));
         } finally {
             setBuyLoadingByGameId((current) => ({ ...current, [gameId]: false }));
         }
@@ -539,12 +541,13 @@ export default function MyGames() {
                 await gameResultService.setMultiplayer(gameId);
                 setIsMultiplayerByGameId((current) => ({ ...current, [gameId]: true }));
             }
-        } catch {
-            setError(
+        } catch (error) {
+            setError(extractErrorMessage(
+                error,
                 isCurrentlyMultiplayer
                     ? "No se pudo cambiar a un jugador."
                     : "No se pudo cambiar a multijugador."
-            );
+            ));
         } finally {
             setMultiplayerLoadingByGameId((current) => ({ ...current, [gameId]: false }));
         }

@@ -7,6 +7,7 @@ import { Game } from '@/models/Game';
 import { Skeleton } from 'primereact/skeleton';
 import { Toast } from 'primereact/toast';
 import { gameResultService } from '@/services/GameResultService';
+import { extractErrorMessage } from '@/services/api-error';
 import {
     findGameResultByGameId,
     getGameResultFlags,
@@ -220,8 +221,8 @@ export const GameCard = memo(({
                 onStatusChange?.(game.id, { isPlayed: true, isWishlist });
                 showToast('Juego marcado como jugado correctamente.', 'success');
             }
-        } catch {
-            showToast('No se pudo actualizar el estado de jugado.', 'error');
+        } catch (error) {
+            showToast(extractErrorMessage(error, 'No se pudo actualizar el estado de jugado.'), 'error');
         } finally {
             setIsUpdatingPlayed(false);
             onGlobalStatusLoadingChange?.(false);
@@ -263,8 +264,8 @@ export const GameCard = memo(({
                 onStatusChange?.(game.id, { isPlayed, isWishlist: true });
                 showToast('Juego añadido a previstos correctamente.', 'success');
             }
-        } catch {
-            showToast('No se pudo actualizar el estado de previstos.', 'error');
+        } catch (error) {
+            showToast(extractErrorMessage(error, 'No se pudo actualizar el estado de previstos.'), 'error');
         } finally {
             setIsUpdatingWishlist(false);
             onGlobalStatusLoadingChange?.(false);

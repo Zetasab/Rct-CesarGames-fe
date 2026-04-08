@@ -1,5 +1,6 @@
 import { BaseService } from './BaseService';
 import { GamePlatform, GameResultModel, normalizeGamePlatform } from '@/models/GameResultModel';
+import { extractMessageFromApiBody, isDailyLimitErrorMessage } from './api-error';
 
 export interface GameResultFilterResponse {
     results: GameResultModel[];
@@ -13,12 +14,18 @@ class GameResultService extends BaseService {
 
     protected async handleResponse<T>(response: Response): Promise<T> {
         if (response.status === 401) {
+            const responseText = await response.clone().text();
+            const responseMessage = extractMessageFromApiBody(responseText) || '';
+            const isDailyLimit401 = isDailyLimitErrorMessage(responseMessage);
+
             if (typeof window !== 'undefined') {
-                localStorage.removeItem('user');
-                localStorage.removeItem('token');
-                sessionStorage.removeItem('user');
-                sessionStorage.removeItem('token');
-                window.location.href = '/login';
+                if (!isDailyLimit401) {
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('token');
+                    sessionStorage.removeItem('user');
+                    sessionStorage.removeItem('token');
+                    window.location.href = '/login';
+                }
             }
         }
         return super.handleResponse<T>(response);

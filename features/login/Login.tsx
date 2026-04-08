@@ -12,6 +12,7 @@ import './login.css';
 
 import { authService } from '@/services/AuthService';
 import { LoginRequest } from '@/models/LoginRequest';
+import { extractErrorMessage } from '@/services/api-error';
 
 
 export default function Login() {
@@ -80,7 +81,7 @@ export default function Login() {
                 console.error("Login error:", err);
                 setLoading(false);
                 setStatus('error');
-                setError('Usuario o contraseña incorrectos');
+                setError(extractErrorMessage(err, 'Usuario o contraseña incorrectos'));
             }
         } else {
             setLoading(false);

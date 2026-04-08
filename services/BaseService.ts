@@ -1,4 +1,5 @@
 import { getBaseUrl } from './config';
+import { extractMessageFromApiBody } from './api-error';
 
 export class BaseService {
     private baseUrl: string;
@@ -61,8 +62,10 @@ export class BaseService {
         if (!response.ok) {
             const errorText = await response.text();
             console.error(`API Error: ${response.status} ${response.statusText}`, errorText);
-            const error = new Error(errorText || `API Error: ${response.status}`) as Error & { status?: number };
+            const parsedErrorMessage = extractMessageFromApiBody(errorText);
+            const error = new Error(parsedErrorMessage || `API Error: ${response.status}`) as Error & { status?: number; rawBody?: string };
             error.status = response.status;
+            error.rawBody = errorText;
             throw error;
         }
 

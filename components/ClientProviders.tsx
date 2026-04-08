@@ -9,7 +9,8 @@ import { usePathname } from 'next/navigation';
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
-    const isLoginPage = pathname === '/login';
+    const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
+    const isLoginPage = normalizedPathname === '/login' || normalizedPathname.endsWith('/login');
 
     useEffect(() => {
         if (typeof window === 'undefined') {
