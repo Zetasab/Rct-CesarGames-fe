@@ -15,75 +15,90 @@ import { GameCard, GameCardSkeleton } from "@/components/game-carousel/GameCarou
 import Footer from "@/shared/footer/Footer";
 import { ConfirmDialog, confirmDialog } from "primereact/confirmdialog";
 import { Dropdown, DropdownChangeEvent } from "primereact/dropdown";
-import { MultiSelect, MultiSelectChangeEvent } from "primereact/multiselect";
+import { MultiSelect } from "primereact/multiselect";
 import { Paginator, PaginatorPageChangeEvent } from "primereact/paginator";
 import { Toast } from "primereact/toast";
+import { InputText } from "primereact/inputtext";
+import { Checkbox } from "primereact/checkbox";
+import { Calendar } from "primereact/calendar";
+import { Button } from "primereact/button";
 import { extractErrorMessage } from "@/services/api-error";
 import {
     getGameResultFlags,
     getGameResultGameId,
     loadGameResultList,
 } from "@/services/GameResultState";
+import {
+    gameService,
+    GenreListItem,
+    PlatformListItem,
+    SearchGamesParams,
+    StoreListItem,
+} from "@/services/GameService";
 
 const PAGE_SIZE = 40;
 const STORAGE_KEYS = {
-    statusMode: "mygames.filter.statusMode",
-    isBought: "mygames.filter.isBought",
-    isMultiplayer: "mygames.filter.isMultiplayer",
-    platforms: "mygames.filter.platforms",
+    collectionMode: "mygames.filter.collectionMode",
     mobileGridMode: "mygames.mobile.gridMode",
 };
 
-type TriStateFilter = boolean | null;
-type StatusMode = "played" | "wishlist" | null;
+type CollectionMode = "played" | "wishlist";
+type SelectOption = { label: string; value: string };
 
-const parseTriStateFromStorage = (value: string | null): TriStateFilter => {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    return null;
-};
+const ORDERING_OPTIONS: Array<{ label: string; value: string }> = [
+    { label: "Nombre (A-Z)", value: "name" },
+    { label: "Nombre (Z-A)", value: "-name" },
+    { label: "Lanzamiento (asc)", value: "released" },
+    { label: "Lanzamiento (desc)", value: "-released" },
+    { label: "Añadidos (asc)", value: "added" },
+    { label: "Añadidos (desc)", value: "-added" },
+    { label: "Creado (asc)", value: "created" },
+    { label: "Creado (desc)", value: "-created" },
+    { label: "Actualizado (asc)", value: "updated" },
+    { label: "Actualizado (desc)", value: "-updated" },
+    { label: "Rating (asc)", value: "rating" },
+    { label: "Rating (desc)", value: "-rating" },
+    { label: "Metacritic (asc)", value: "metacritic" },
+    { label: "Metacritic (desc)", value: "-metacritic" },
+];
 
-const parseStatusModeFromStorage = (value: string | null): StatusMode => {
+const parseCollectionModeFromStorage = (value: string | null): CollectionMode => {
     if (value === "played") return "played";
     if (value === "wishlist") return "wishlist";
-    return null;
+    return "played";
 };
 
-const parsePlatformsFromStorage = (value: string | null): GamePlatform[] => {
-    if (!value) return [];
+const toGameFromResult = (result: GameResultModel | Game): Game | null => {
+    const rawResult = result as unknown as Record<string, unknown>;
 
-    try {
-        const parsedValue = JSON.parse(value);
-        if (!Array.isArray(parsedValue)) {
-            return [];
-        }
-
-        const normalized = parsedValue.map((platform) => normalizeGamePlatform(platform));
-        return Array.from(new Set(normalized));
-    } catch {
-        return [];
+    const fullGameId = Number(rawResult.id);
+    if (Number.isFinite(fullGameId) && fullGameId > 0 && "slug" in rawResult) {
+        return result as Game;
     }
-};
 
-const toGameFromResult = (result: GameResultModel): Game | null => {
-    const id = Number(result.game_id);
+    const id = Number(rawResult.game_id ?? rawResult.id);
     if (!Number.isFinite(id) || id <= 0) {
         return null;
     }
 
-    const rating = Number(result.rating);
+    const rating = Number(rawResult.rating);
+    const rawName = String(rawResult.name ?? "Juego").trim() || "Juego";
+    const rawReleased = String(rawResult.released ?? "");
+    const rawBackground = String(rawResult.background_image ?? "");
+    const rawTba = rawResult.tba === true || rawResult.tba === 1 || String(rawResult.tba ?? "").toLowerCase() === "true";
+    const rawPriority = rawResult.Priority === true || rawResult.Priority === 1 || String(rawResult.Priority ?? "").toLowerCase() === "true";
 
     return {
         id,
         slug: `game-${id}`,
-        name: (result.name || "Juego").trim() || "Juego",
-        Priority: Boolean(result.Priority),
+        name: rawName,
+        Priority: rawPriority,
         description_raw: "",
         description: "",
         website: "",
-        released: result.released || "",
-        tba: Boolean(result.tba),
-        background_image: result.background_image || "",
+        released: rawReleased,
+        tba: rawTba,
+        background_image: rawBackground,
         rating: Number.isFinite(rating) ? rating : 0,
         rating_top: 0,
         ratings: [],
@@ -170,22 +185,20 @@ function PlatformOptionContent({
 
 export default function MyGames() {
     const [name, setName] = useState("");
-    const [statusMode, setStatusMode] = useState<StatusMode>(() => {
-        if (typeof window === "undefined") return null;
-        return parseStatusModeFromStorage(window.localStorage.getItem(STORAGE_KEYS.statusMode));
+    const [collectionMode, setCollectionMode] = useState<CollectionMode>(() => {
+        if (typeof window === "undefined") return "played";
+        return parseCollectionModeFromStorage(window.localStorage.getItem(STORAGE_KEYS.collectionMode));
     });
-    const [isBought, setIsBought] = useState<TriStateFilter>(() => {
-        if (typeof window === "undefined") return false;
-        return parseTriStateFromStorage(window.localStorage.getItem(STORAGE_KEYS.isBought));
-    });
-    const [isMultiplayer, setIsMultiplayer] = useState<TriStateFilter>(() => {
-        if (typeof window === "undefined") return false;
-        return parseTriStateFromStorage(window.localStorage.getItem(STORAGE_KEYS.isMultiplayer));
-    });
-    const [platforms, setPlatforms] = useState<GamePlatform[]>(() => {
-        if (typeof window === "undefined") return [];
-        return parsePlatformsFromStorage(window.localStorage.getItem(STORAGE_KEYS.platforms));
-    });
+    const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+    const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
+    const [selectedStores, setSelectedStores] = useState<string[]>([]);
+    const [ordering, setOrdering] = useState("");
+    const [dateRange, setDateRange] = useState<Date[] | null>(null);
+    const [searchPrecise, setSearchPrecise] = useState(false);
+    const [searchExact, setSearchExact] = useState(false);
+    const [genreOptions, setGenreOptions] = useState<SelectOption[]>([]);
+    const [platformOptions, setPlatformOptions] = useState<SelectOption[]>([]);
+    const [storeOptions, setStoreOptions] = useState<SelectOption[]>([]);
     const [mobileGridMode, setMobileGridMode] = useState<"double" | "single">(() => {
         if (typeof window === "undefined") return "double";
         return window.localStorage.getItem(STORAGE_KEYS.mobileGridMode) === "single" ? "single" : "double";
@@ -201,6 +214,7 @@ export default function MyGames() {
     const [multiplayerLoadingByGameId, setMultiplayerLoadingByGameId] = useState<Record<number, boolean>>({});
     const [platformLoadingByGameId, setPlatformLoadingByGameId] = useState<Record<number, boolean>>({});
     const [loading, setLoading] = useState(false);
+    const [isStatusLoading, setIsStatusLoading] = useState(false);
     const [priorityLoadingGameId, setPriorityLoadingGameId] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [openMenuId, setOpenMenuId] = useState<number | null>(null);
@@ -210,23 +224,36 @@ export default function MyGames() {
     const hasAutoFiltered = useRef(false);
     const toastRef = useRef<Toast>(null);
 
-    const cycleStatusMode = useCallback(() => {
-        setStatusMode((current) => {
-            if (current === null) return "played";
-            if (current === "played") return "wishlist";
-            return null;
-        });
-    }, []);
+    const datesFilter = useMemo(() => {
+        const formatDate = (value: Date) => {
+            const year = value.getFullYear();
+            const month = String(value.getMonth() + 1).padStart(2, "0");
+            const day = String(value.getDate()).padStart(2, "0");
+            return `${year}-${month}-${day}`;
+        };
 
-    const cycleTriState = useCallback((current: TriStateFilter): TriStateFilter => {
-        if (current === null) return true;
-        if (current === true) return false;
-        return null;
-    }, []);
+        const from = dateRange?.[0] ?? null;
+        const to = dateRange?.[1] ?? null;
+
+        if (!from || !to || from > to) {
+            return undefined;
+        }
+
+        return `${formatDate(from)},${formatDate(to)}`;
+    }, [dateRange]);
 
     const hasAnyFilter = useMemo(() => {
-        return Boolean(name.trim()) || statusMode !== null || isBought !== null || isMultiplayer !== null || platforms.length > 0;
-    }, [name, statusMode, isBought, isMultiplayer, platforms]);
+        return (
+            Boolean(name.trim()) ||
+            selectedGenres.length > 0 ||
+            selectedPlatforms.length > 0 ||
+            selectedStores.length > 0 ||
+            Boolean(ordering) ||
+            Boolean(datesFilter) ||
+            searchPrecise ||
+            searchExact
+        );
+    }, [datesFilter, name, ordering, searchExact, searchPrecise, selectedGenres.length, selectedPlatforms.length, selectedStores.length]);
 
     const orderedGames = useMemo(() => {
         if (games.length <= 1) {
@@ -270,26 +297,46 @@ export default function MyGames() {
                 return acc;
             }, {});
 
-            const filteredResults = await gameResultService.filter(
-                name.trim() || undefined,
-                statusMode === "played" ? true : statusMode === "wishlist" ? false : true,
-                statusMode === "wishlist" ? true : statusMode === "played" ? false : true,
-                isMultiplayer === null ? undefined : isMultiplayer,
-                isBought === null ? undefined : isBought,
-                platforms.length ? platforms : undefined,
-                page * PAGE_SIZE,
-                PAGE_SIZE
+            const params: SearchGamesParams = {
+                page: page + 1,
+                pageSize: PAGE_SIZE,
+                search: name.trim() || undefined,
+                searchPrecise,
+                searchExact,
+                genres: selectedGenres.join(",") || undefined,
+                platforms: selectedPlatforms.join(",") || undefined,
+                stores: selectedStores.join(",") || undefined,
+                ordering: ordering || undefined,
+                dates: datesFilter,
+            };
+
+            const response = await gameResultService.searchUserCollection(
+                collectionMode === "played" ? "PlayedGames" : "WishlistGames",
+                params
             );
 
-            const response = Array.isArray(filteredResults)
-                ? { results: filteredResults, count: undefined }
-                : (filteredResults as { results?: GameResultModel[]; count?: number });
+            const responseRecord = response as {
+                items?: GameResultModel[];
+                results?: GameResultModel[];
+                count?: number;
+                totalCount?: number;
+                page?: number;
+            };
 
-            const safeResults = Array.isArray(response.results) ? response.results : [];
-            const parsedCount = Number(response.count);
+            const safeResults = Array.isArray(responseRecord.items)
+                ? responseRecord.items
+                : Array.isArray(responseRecord.results)
+                    ? responseRecord.results
+                    : [];
+
+            const rawCount = responseRecord.totalCount ?? responseRecord.count;
+            const parsedCount = Number(rawCount);
             const hasValidCount = Number.isFinite(parsedCount) && parsedCount >= 0;
 
-            setCurrentPage(page);
+            const apiPage = Number(responseRecord.page);
+            const currentApiPage = Number.isFinite(apiPage) && apiPage > 0 ? apiPage - 1 : page;
+
+            setCurrentPage(currentApiPage);
             setLastPageResultCount(safeResults.length);
             setTotalRecordsFromApi(hasValidCount ? parsedCount : null);
 
@@ -302,10 +349,10 @@ export default function MyGames() {
             const nextGamesById = new Map<number, Game>();
 
             for (const result of safeResults) {
-                const gameId = Number(result.game_id);
+                const record = result as unknown as Record<string, unknown>;
+                const gameId = Number(record.game_id ?? record.id);
                 if (!Number.isFinite(gameId) || gameId <= 0) continue;
 
-                const record = result as unknown as Record<string, unknown>;
                 const rawPriority =
                     record.priority ??
                     record.Priority ??
@@ -338,9 +385,21 @@ export default function MyGames() {
                     rawIsWishlist === 1 ||
                     String(rawIsWishlist ?? '').trim().toLowerCase() === 'true';
 
+                const hasRawPlayed = rawIsPlayed !== undefined && rawIsPlayed !== null;
+                const hasRawWishlist = rawIsWishlist !== undefined && rawIsWishlist !== null;
+
                 const savedFlags = savedStatusByGameId[String(gameId)];
-                const effectiveIsPlayed = typeof savedFlags?.isPlayed === "boolean" ? savedFlags.isPlayed : parsedIsPlayed;
-                const effectiveIsWishlist = typeof savedFlags?.isWishlist === "boolean" ? savedFlags.isWishlist : parsedIsWishlist;
+                const effectiveIsPlayed = typeof savedFlags?.isPlayed === "boolean"
+                    ? savedFlags.isPlayed
+                    : hasRawPlayed
+                        ? parsedIsPlayed
+                        : collectionMode === "played";
+
+                const effectiveIsWishlist = typeof savedFlags?.isWishlist === "boolean"
+                    ? savedFlags.isWishlist
+                    : hasRawWishlist
+                        ? parsedIsWishlist
+                        : collectionMode === "wishlist";
 
                 const parsedIsBought =
                     rawIsBought === true ||
@@ -397,7 +456,7 @@ export default function MyGames() {
         } finally {
             setLoading(false);
         }
-    }, [name, statusMode, isBought, isMultiplayer, platforms]);
+    }, [collectionMode, datesFilter, name, ordering, searchExact, searchPrecise, selectedGenres, selectedPlatforms, selectedStores]);
 
     const hasNextPage = lastPageResultCount === PAGE_SIZE;
     const totalRecords = totalRecordsFromApi ?? ((currentPage + 1) * PAGE_SIZE + (hasNextPage ? 1 : 0));
@@ -573,6 +632,64 @@ export default function MyGames() {
         }
     }, [multiplayerLoadingByGameId, isMultiplayerByGameId]);
 
+    const handleClearFilters = useCallback(() => {
+        setName("");
+        setSelectedGenres([]);
+        setSelectedPlatforms([]);
+        setSelectedStores([]);
+        setOrdering("");
+        setDateRange(null);
+        setSearchPrecise(false);
+        setSearchExact(false);
+    }, []);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const loadFilterOptions = async () => {
+            const [genresResult, platformsResult, storesResult] = await Promise.allSettled([
+                gameService.getGenres(),
+                gameService.getPlatforms(),
+                gameService.getStores(),
+            ]);
+
+            if (!isMounted) {
+                return;
+            }
+
+            const genres = genresResult.status === "fulfilled" ? genresResult.value : [];
+            const platforms = platformsResult.status === "fulfilled" ? platformsResult.value : [];
+            const stores = storesResult.status === "fulfilled" ? storesResult.value : [];
+
+            setGenreOptions(
+                (Array.isArray(genres) ? genres : []).map((genre: GenreListItem) => ({
+                    label: genre.name,
+                    value: String(genre.id),
+                }))
+            );
+
+            setPlatformOptions(
+                (Array.isArray(platforms) ? platforms : []).slice(0, 40).map((platform: PlatformListItem) => ({
+                    label: platform.name,
+                    value: String(platform.id),
+                }))
+            );
+
+            setStoreOptions(
+                (Array.isArray(stores) ? stores : []).map((store: StoreListItem) => ({
+                    label: store.name,
+                    value: String(store.id),
+                }))
+            );
+        };
+
+        void loadFilterOptions();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
     useEffect(() => {
         if (hasAutoFiltered.current) return;
         hasAutoFiltered.current = true;
@@ -591,23 +708,11 @@ export default function MyGames() {
         return () => {
             window.clearTimeout(timeoutId);
         };
-    }, [name, statusMode, isBought, isMultiplayer, platforms, runFilter]);
+    }, [collectionMode, dateRange, name, ordering, runFilter, searchExact, searchPrecise, selectedGenres, selectedPlatforms, selectedStores]);
 
     useEffect(() => {
-        window.localStorage.setItem(STORAGE_KEYS.statusMode, statusMode ?? "null");
-    }, [statusMode]);
-
-    useEffect(() => {
-        window.localStorage.setItem(STORAGE_KEYS.isBought, isBought === null ? "null" : String(isBought));
-    }, [isBought]);
-
-    useEffect(() => {
-        window.localStorage.setItem(STORAGE_KEYS.isMultiplayer, isMultiplayer === null ? "null" : String(isMultiplayer));
-    }, [isMultiplayer]);
-
-    useEffect(() => {
-        window.localStorage.setItem(STORAGE_KEYS.platforms, JSON.stringify(platforms));
-    }, [platforms]);
+        window.localStorage.setItem(STORAGE_KEYS.collectionMode, collectionMode);
+    }, [collectionMode]);
 
     useEffect(() => {
         window.localStorage.setItem(STORAGE_KEYS.mobileGridMode, mobileGridMode);
@@ -648,94 +753,147 @@ export default function MyGames() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_14rem_auto] gap-3 md:gap-4 md:items-center">
-                        <input
-                            value={name}
-                            onChange={(event) => setName(event.target.value)}
-                            placeholder="Filtrar por nombre"
-                            className="bg-transparent border border-gray-700 rounded-lg px-3 py-2 text-sm text-white outline-none focus:border-[#ff4200]"
-                        />
+                    <div className="mb-3">
+                        <div className="inline-flex rounded-lg border border-gray-700 overflow-hidden">
+                            <button
+                                type="button"
+                                onClick={() => setCollectionMode("played")}
+                                className={`px-4 py-2 text-sm font-semibold transition-colors ${
+                                    collectionMode === "played"
+                                        ? "bg-[#ff4200] text-white"
+                                        : "bg-transparent text-gray-300 hover:bg-white/10"
+                                }`}
+                                aria-pressed={collectionMode === "played"}
+                            >
+                                Jugados
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setCollectionMode("wishlist")}
+                                className={`px-4 py-2 text-sm font-semibold transition-colors ${
+                                    collectionMode === "wishlist"
+                                        ? "bg-[#ff4200] text-white"
+                                        : "bg-transparent text-gray-300 hover:bg-white/10"
+                                }`}
+                                aria-pressed={collectionMode === "wishlist"}
+                            >
+                                Deseados
+                            </button>
+                        </div>
+                    </div>
 
-                        <div className="w-full md:w-56 max-w-full md:justify-self-end">
-                            <MultiSelect
-                                value={platforms}
-                                options={gamePlatformOptions}
+                    <div className="space-y-2">
+                        <div className="grid grid-cols-1 md:grid-cols-12 gap-0 items-start justify-items-stretch">
+                            <div className="md:col-span-3 p-1">
+                                <InputText
+                                    value={name}
+                                    onChange={(event) => setName(event.target.value)}
+                                    placeholder="Buscar por nombre..."
+                                    className="w-full bg-transparent border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-white outline-none focus:border-[#ff4200]"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 p-1">
+                                <MultiSelect
+                                    value={selectedGenres}
+                                    onChange={(event) => setSelectedGenres((event.value as string[]) ?? [])}
+                                    options={genreOptions}
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    display="chip"
+                                    filter
+                                    placeholder="Géneros"
+                                    className="w-full text-xs"
+                                    panelClassName="bg-[#151515] text-white"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 p-1">
+                                <MultiSelect
+                                    value={selectedPlatforms}
+                                    onChange={(event) => setSelectedPlatforms((event.value as string[]) ?? [])}
+                                    options={platformOptions}
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    display="chip"
+                                    filter
+                                    placeholder="Plataformas"
+                                    className="w-full text-xs"
+                                    panelClassName="bg-[#151515] text-white"
+                                />
+                            </div>
+
+                            <div className="md:col-span-2 p-1">
+                                <MultiSelect
+                                    value={selectedStores}
+                                    onChange={(event) => setSelectedStores((event.value as string[]) ?? [])}
+                                    options={storeOptions}
+                                    optionLabel="label"
+                                    optionValue="value"
+                                    display="chip"
+                                    filter
+                                    placeholder="Stores"
+                                    className="w-full text-xs"
+                                    panelClassName="bg-[#151515] text-white"
+                                />
+                            </div>
+
+                            <div className="md:col-span-3 p-1">
+                                <Calendar
+                                    value={dateRange}
+                                    onChange={(event) => setDateRange((event.value as Date[] | null) ?? null)}
+                                    selectionMode="range"
+                                    dateFormat="yy-mm-dd"
+                                    showIcon
+                                    readOnlyInput
+                                    placeholder="Desde - Hasta"
+                                    className="w-full text-xs"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center justify-start gap-2">
+                            <div className="flex items-center gap-3 text-xs text-gray-300">
+                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                    <Checkbox
+                                        inputId="mygamesSearchPrecise"
+                                        checked={searchPrecise}
+                                        onChange={(event) => setSearchPrecise(Boolean(event.checked))}
+                                    />
+                                    <span>Preciso</span>
+                                </label>
+                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                    <Checkbox
+                                        inputId="mygamesSearchExact"
+                                        checked={searchExact}
+                                        onChange={(event) => setSearchExact(Boolean(event.checked))}
+                                    />
+                                    <span>Exacto</span>
+                                </label>
+                            </div>
+
+                            <Dropdown
+                                value={ordering}
+                                onChange={(event) => setOrdering((event.value as string) ?? "")}
+                                options={[{ label: "Orden por defecto", value: "" }, ...ORDERING_OPTIONS]}
                                 optionLabel="label"
                                 optionValue="value"
-                                onChange={(event: MultiSelectChangeEvent) => {
-                                    const selectedPlatforms = Array.isArray(event.value)
-                                        ? event.value.map((platform) => normalizeGamePlatform(platform))
-                                        : [];
-                                    setPlatforms(Array.from(new Set(selectedPlatforms)));
-                                }}
-                                itemTemplate={(option) => (
-                                    <PlatformOptionContent
-                                        platform={normalizeGamePlatform(option?.value)}
-                                    />
-                                )}
-                                selectedItemTemplate={(value) => (
-                                    <PlatformOptionContent platform={normalizeGamePlatform(value)} />
-                                )}
-                                placeholder="Plataformas"
-                                filter
-                                display="chip"
-                                className="mygames-platform-multiselect"
-                                panelClassName="mygames-platform-panel"
-                                aria-label="Filtrar por plataformas"
+                                placeholder="Ordenar"
+                                className="w-full md:w-56 text-xs"
+                                panelClassName="bg-[#151515] text-white"
                             />
-                        </div>
 
-                        <div className="rounded-lg p-1 flex items-center justify-center md:justify-end gap-2 flex-wrap md:flex-nowrap">
-                            <button
-                                type="button"
-                                onClick={cycleStatusMode}
-                                className={`h-10 rounded-lg px-3 flex items-center justify-center gap-2 transition-colors border text-sm font-semibold cursor-pointer ${
-                                    statusMode === "played"
-                                        ? 'bg-transparent border-green-500 text-green-400'
-                                        : statusMode === "wishlist"
-                                            ? 'bg-transparent border-blue-500 text-blue-400'
-                                            : 'bg-transparent border-gray-300 text-gray-100'
-                                }`}
-                                title="Filtro estado: Jugado, Wishlist o Indiferente"
-                                aria-pressed={statusMode !== null}
-                            >
-                                <i className={`pi ${statusMode === "played" ? "pi-check" : statusMode === "wishlist" ? "pi-clock" : "pi-minus"} text-lg`}></i>
-                                <span>{statusMode === "played" ? "Jugado" : statusMode === "wishlist" ? "Wishlist" : "Indiferente"}</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setIsBought((current) => cycleTriState(current))}
-                                className={`h-10 rounded-lg px-3 flex items-center justify-center gap-2 transition-colors border text-sm font-semibold cursor-pointer ${
-                                    isBought === true
-                                        ? 'bg-transparent border-emerald-500 text-emerald-400'
-                                        : isBought === false
-                                            ? 'bg-transparent border-amber-500 text-amber-300'
-                                            : 'bg-transparent border-gray-300 text-gray-100'
-                                }`}
-                                title="Filtro comprado: Sí, No o Indiferente"
-                                aria-pressed={isBought !== null}
-                            >
-                                <i className={`pi ${isBought === true ? "pi-shopping-cart" : isBought === false ? "pi-times" : "pi-minus"} text-lg`}></i>
-                                <span>{isBought === true ? "Comprado sí" : isBought === false ? "Comprado no" : "Comprado indif."}</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setIsMultiplayer((current) => cycleTriState(current))}
-                                className={`h-10 rounded-lg px-3 flex items-center justify-center gap-2 transition-colors border text-sm font-semibold cursor-pointer ${
-                                    isMultiplayer === true
-                                        ? 'bg-transparent border-fuchsia-500 text-fuchsia-300'
-                                        : isMultiplayer === false
-                                            ? 'bg-transparent border-amber-500 text-amber-300'
-                                            : 'bg-transparent border-gray-300 text-gray-100'
-                                }`}
-                                title="Filtro multijugador: Sí, No o Indiferente"
-                                aria-pressed={isMultiplayer !== null}
-                            >
-                                <i className={`pi ${isMultiplayer === true ? "pi-users" : isMultiplayer === false ? "pi-user" : "pi-minus"} text-lg`}></i>
-                                <span>{isMultiplayer === true ? "Multi sí" : isMultiplayer === false ? "Multi no" : "Multi indif."}</span>
-                            </button>
+                            <div className="flex flex-wrap items-center gap-2 justify-start">
+                                <Button
+                                    type="button"
+                                    label="Limpiar"
+                                    onClick={handleClearFilters}
+                                    outlined
+                                    disabled={loading}
+                                />
+                                <span className="text-xs text-gray-400">{totalRecords.toLocaleString()} resultados</span>
+                            </div>
                         </div>
-
                     </div>
                 </section>
 
@@ -769,11 +927,6 @@ export default function MyGames() {
                             <div className={`grid ${mobileGridMode === "single" ? "grid-cols-1" : "grid-cols-2"} lg:grid-cols-[repeat(auto-fit,minmax(500px,500px))] gap-4 justify-center justify-items-center`}>
                                 {orderedGames.map((game) => (
                                     <div key={game.id} className="group relative w-full max-w-70 lg:w-125 lg:max-w-125">
-                                        {(() => {
-                                            const selectedPlatform = platformByGameId[game.id] ?? GamePlatform.None;
-                                            const isPlatformLoading = Boolean(platformLoadingByGameId[game.id]);
-
-                                            return (
                                         <GameCard
                                             game={game}
                                             openMenuId={openMenuId}
@@ -782,155 +935,12 @@ export default function MyGames() {
                                             initialIsPlayed={Boolean(isPlayedByGameId[game.id])}
                                             initialIsWishlist={Boolean(isWishlistByGameId[game.id])}
                                             onStatusChange={handleGameStatusChange}
+                                            globalStatusLoading={isStatusLoading}
+                                            onGlobalStatusLoadingChange={setIsStatusLoading}
                                             onLongPress={handlePriorityLongPress}
                                             className="w-full max-w-70 lg:w-125 lg:max-w-125"
                                             mediaClassName={mobileGridMode === "double" ? "h-[110px] md:h-[250px]" : "h-[176px] md:h-[250px]"}
-                                            hoverTitleMeta={(
-                                                <div
-                                                    className="inline-flex rounded-full border border-white/15 bg-black/40 p-1 backdrop-blur-sm"
-                                                    onMouseDown={(event) => event.stopPropagation()}
-                                                    onClick={(event) => event.stopPropagation()}
-                                                >
-                                                    <Dropdown
-                                                        value={selectedPlatform}
-                                                        options={gamePlatformOptions}
-                                                        optionLabel="label"
-                                                        optionValue="value"
-                                                        disabled={isPlatformLoading}
-                                                        onChange={(event: DropdownChangeEvent) => {
-                                                            event.originalEvent?.stopPropagation();
-                                                            void handlePlatformChange(game.id, normalizeGamePlatform(event.value));
-                                                        }}
-                                                        valueTemplate={(value) => (
-                                                            <PlatformOptionContent
-                                                                platform={normalizeGamePlatform(value)}
-                                                                showLabel={false}
-                                                            />
-                                                        )}
-                                                        itemTemplate={(option) => (
-                                                            <PlatformOptionContent
-                                                                platform={normalizeGamePlatform(option?.value)}
-                                                            />
-                                                        )}
-                                                        className="mygames-platform-select mygames-platform-select--desktop"
-                                                        panelClassName="mygames-platform-panel"
-                                                        aria-label={`Seleccionar plataforma para ${game.name}`}
-                                                    />
-                                                </div>
-                                            )}
-                                            mobileExtraActions={(
-                                                <>
-                                                    <div className="px-3 pt-3 pb-2" onMouseDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
-                                                        <Dropdown
-                                                            value={selectedPlatform}
-                                                            options={gamePlatformOptions}
-                                                            optionLabel="label"
-                                                            optionValue="value"
-                                                            disabled={isPlatformLoading}
-                                                            onChange={(event: DropdownChangeEvent) => {
-                                                                event.originalEvent?.stopPropagation();
-                                                                void handlePlatformChange(game.id, normalizeGamePlatform(event.value));
-                                                            }}
-                                                            valueTemplate={(value) => (
-                                                                <PlatformOptionContent platform={normalizeGamePlatform(value)} />
-                                                            )}
-                                                            itemTemplate={(option) => (
-                                                                <PlatformOptionContent platform={normalizeGamePlatform(option?.value)} />
-                                                            )}
-                                                            className="mygames-platform-select mygames-platform-select--mobile"
-                                                            panelClassName="mygames-platform-panel"
-                                                            aria-label={`Seleccionar plataforma para ${game.name}`}
-                                                        />
-                                                    </div>
-                                                    <div className="h-px bg-gray-700 mx-2"></div>
-                                                    <button
-                                                        className={`flex items-center gap-3 px-4 py-3 text-sm text-left transition-all hover:translate-x-px cursor-pointer ${
-                                                            multiplayerLoadingByGameId[game.id]
-                                                                ? 'opacity-60 cursor-not-allowed text-gray-300'
-                                                                : isMultiplayerByGameId[game.id]
-                                                                    ? 'bg-fuchsia-600 text-white hover:bg-fuchsia-500'
-                                                                    : 'text-gray-200 hover:bg-white/10'
-                                                        }`}
-                                                        disabled={Boolean(multiplayerLoadingByGameId[game.id])}
-                                                        onClick={(event) => {
-                                                            event.preventDefault();
-                                                            event.stopPropagation();
-                                                            void handleToggleMultiplayer(game.id);
-                                                        }}
-                                                    >
-                                                        <i className={`pi ${multiplayerLoadingByGameId[game.id] ? 'pi-spin pi-spinner' : isMultiplayerByGameId[game.id] ? 'pi-users' : 'pi-user'} text-xs ${isMultiplayerByGameId[game.id] ? 'text-white' : 'text-fuchsia-400'}`}></i>
-                                                        {isMultiplayerByGameId[game.id] ? 'Multiplayer' : 'Singleplayer'}
-                                                    </button>
-                                                    <div className="h-px bg-gray-700 mx-2"></div>
-                                                    <button
-                                                        className={`flex items-center gap-3 px-4 py-3 text-sm text-left transition-all hover:translate-x-px cursor-pointer ${
-                                                            buyLoadingByGameId[game.id]
-                                                                ? 'opacity-60 cursor-not-allowed text-gray-300'
-                                                                : isBoughtByGameId[game.id]
-                                                                    ? 'bg-emerald-600 text-white hover:bg-emerald-500'
-                                                                    : 'text-gray-200 hover:bg-white/10'
-                                                        }`}
-                                                        disabled={Boolean(buyLoadingByGameId[game.id])}
-                                                        onClick={(event) => {
-                                                            event.preventDefault();
-                                                            event.stopPropagation();
-                                                            void handleToggleBought(game.id);
-                                                        }}
-                                                    >
-                                                        <i className={`pi ${buyLoadingByGameId[game.id] ? 'pi-spin pi-spinner' : 'pi-shopping-cart'} text-xs ${isBoughtByGameId[game.id] ? 'text-white' : 'text-emerald-400'}`}></i>
-                                                        {isBoughtByGameId[game.id] ? 'Comprado' : 'Comprar'}
-                                                    </button>
-                                                </>
-                                            )}
                                         />
-                                            );
-                                        })()}
-                                        <button
-                                            type="button"
-                                            onClick={(event) => {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                void handleToggleBought(game.id);
-                                            }}
-                                            disabled={Boolean(buyLoadingByGameId[game.id])}
-                                            className={`hidden md:flex absolute bottom-2 right-2 z-30 rounded-md border bg-black/75 h-7 min-w-23 px-2 py-1 text-[11px] font-semibold shadow-sm items-center justify-center gap-1 transition-colors cursor-pointer md:opacity-0 md:translate-y-1 md:group-hover:opacity-100 md:group-hover:translate-y-0 md:transition-all md:duration-300 ${
-                                                buyLoadingByGameId[game.id]
-                                                    ? 'border-gray-500/60 text-gray-300 cursor-not-allowed'
-                                                    : isBoughtByGameId[game.id]
-                                                        ? 'border-emerald-400/60 text-emerald-300 hover:border-emerald-300 hover:text-emerald-200'
-                                                        : 'border-[#ff4200]/70 text-[#ff9b75] hover:border-[#ff4200] hover:text-[#ffb290]'
-                                            }`}
-                                            title={isBoughtByGameId[game.id] ? "Quitar de comprados" : "Marcar como comprado"}
-                                        >
-                                            <i className={`pi ${buyLoadingByGameId[game.id] ? 'pi-spin pi-spinner' : 'pi-shopping-cart'} text-[10px]`}></i>
-                                            {isBoughtByGameId[game.id] ? 'Comprado' : 'Comprar'}
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(event) => {
-                                                event.preventDefault();
-                                                event.stopPropagation();
-                                                void handleToggleMultiplayer(game.id);
-                                            }}
-                                            disabled={Boolean(multiplayerLoadingByGameId[game.id])}
-                                            className={`hidden md:flex absolute right-0 top-1/2 z-30 -translate-y-1/2 rounded-md border bg-black/75 h-7 min-w-23 px-2 py-1 text-[11px] font-semibold shadow-sm items-center justify-center gap-1 transition-colors cursor-pointer md:opacity-0 md:translate-y-1 md:group-hover:opacity-100 md:group-hover:translate-y-0 md:transition-all md:duration-300 ${
-                                                multiplayerLoadingByGameId[game.id]
-                                                    ? 'border-gray-500/60 text-gray-300 cursor-not-allowed'
-                                                    : isMultiplayerByGameId[game.id]
-                                                        ? 'border-fuchsia-400/70 text-fuchsia-300 hover:border-fuchsia-300 hover:text-fuchsia-200'
-                                                        : 'border-amber-400/70 text-amber-300 hover:border-amber-300 hover:text-amber-200'
-                                            }`}
-                                            title={
-                                                isMultiplayerByGameId[game.id]
-                                                    ? "Cambiar a un jugador"
-                                                    : "Cambiar a multijugador"
-                                            }
-                                        >
-                                            <i className={`pi ${multiplayerLoadingByGameId[game.id] ? 'pi-spin pi-spinner' : isMultiplayerByGameId[game.id] ? 'pi-users' : 'pi-user'} text-[11px]`}></i>
-                                            <span className="whitespace-nowrap">
-                                                {isMultiplayerByGameId[game.id] ? 'Mltiplayer' : 'Singeplayer'}
-                                            </span>
-                                        </button>
                                     </div>
                                 ))}
                             </div>
