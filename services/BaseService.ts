@@ -45,6 +45,7 @@ export class BaseService {
     private getHeaders(): HeadersInit {
         const headers: HeadersInit = {
             'Content-Type': 'application/json',
+            'X-Tracking-Sensitive-Consent': 'accepted',
         };
         
         // Add auth token if available
