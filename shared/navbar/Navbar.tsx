@@ -273,17 +273,14 @@ export default function Navbar() {
                         </div>
 
                         <div className="md:hidden">
-                            <div className="rounded-full overflow-hidden transition-all duration-300 hover:scale-110 hover:shadow-[0_0_15px_rgba(255,255,255,0.3)] border-2 border-transparent hover:border-white/20">
-                                <Image
-                                    src={profileImage}
-                                    className="p-button-text transition-all duration-300 text-white object-cover cursor-pointer"
-                                    style={{ height: scrolled ? 40 : 50, width: scrolled ? 40 : 50 }}
-                                    onClick={() => setMobileMenuOpen(true)}
-                                    alt="User Profile"
-                                    width={50}
-                                    height={50}
-                                />
-                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setMobileMenuOpen(true)}
+                                aria-label="Abrir menu"
+                                className="rounded-full h-10 w-10 flex items-center justify-center text-white border border-white/25 bg-black/35 backdrop-blur-sm transition-all duration-300 hover:scale-110 hover:border-white/45 hover:bg-white/10"
+                            >
+                                <i className="pi pi-ellipsis-v text-sm" />
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -42,7 +42,7 @@ const SECTION_VIEW_STORAGE_KEY = "homeSectionViewModes";
 const DEFAULT_VIEW_MODES: Record<SectionKey, ViewMode> = {
     trending: "carousel",
     topRated: "carousel",
-    newReleases: "carousel",
+    newReleases: "grid",
     upcomingAnticipated: "carousel",
     indie: "carousel",
 };
@@ -58,6 +58,7 @@ const getInitialSectionViewModes = (): Record<SectionKey, ViewMode> => {
         return {
             ...DEFAULT_VIEW_MODES,
             ...parsed,
+            newReleases: "grid",
         };
     } catch (error) {
         console.error("Error reading home view modes:", error);
@@ -380,6 +381,7 @@ function HomeTabsShowcase({
 function HomeGamesSection({
     sectionKey,
     title,
+    searchHref,
     games,
     viewMode,
     gameStatusById,
@@ -388,6 +390,7 @@ function HomeGamesSection({
 }: {
     sectionKey: SectionKey;
     title: string;
+    searchHref: string;
     games: Game[];
     viewMode: ViewMode;
     gameStatusById: Record<string, GameStatusFlags>;
@@ -407,10 +410,18 @@ function HomeGamesSection({
     return (
         <section className="pb-2">
             <div className="px-4 md:px-8 lg:px-12 mb-2 flex items-center justify-between gap-3">
-                <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-                    <span className="w-1 h-8 bg-[#ff4200] rounded-full"></span>
-                    {title}
-                </h2>
+                <div className="flex items-center gap-3">
+                    <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+                        <span className="w-1 h-8 bg-[#ff4200] rounded-full"></span>
+                        {title}
+                    </h2>
+                    <Link
+                        href={searchHref}
+                        className="text-[11px] md:text-xs text-[#ff9b75] hover:text-[#ffb08f] underline underline-offset-2 whitespace-nowrap"
+                    >
+                        Ver mas
+                    </Link>
+                </div>
 
                 <div className="flex items-center gap-2">
                     <button
@@ -445,6 +456,8 @@ function HomeGamesSection({
                     showTitle={false}
                     gameStatusById={gameStatusById}
                     onGameStatusChange={onGameStatusChange}
+                    cardClassName="w-64 md:w-96"
+                    cardMediaClassName="h-36 md:h-56"
                 />
             ) : (
                 <div className="pb-10">
@@ -460,6 +473,7 @@ function HomeGamesSection({
                                             openMenuId={openMenuId}
                                             toggleMenu={toggleMenu}
                                             className="w-full"
+                                            mediaClassName="h-36 md:h-56"
                                             initialIsPlayed={status?.isPlayed}
                                             initialIsWishlist={status?.isWishlist}
                                             onStatusChange={onGameStatusChange}
@@ -639,6 +653,26 @@ export default function Home() {
         return `${year}-${month}-${day}`;
     };
 
+    const sectionSearchHref = useMemo(() => {
+        const today = new Date();
+        const oneYearAgo = new Date(today);
+        oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+        const sixMonthsAgo = new Date(today);
+        sixMonthsAgo.setMonth(today.getMonth() - 6);
+
+        const oneYearFromNow = new Date(today);
+        oneYearFromNow.setFullYear(today.getFullYear() + 1);
+
+        return {
+            trending: `/search?ordering=-added&dates=${formatDate(oneYearAgo)},${formatDate(today)}`,
+            topRated: "/search?ordering=-rating",
+            newReleases: `/search?ordering=-released&dates=${formatDate(sixMonthsAgo)},${formatDate(today)}`,
+            upcomingAnticipated: `/search?ordering=-added&dates=${formatDate(today)},${formatDate(oneYearFromNow)}`,
+            indie: "/search?genres=indie&ordering=-added",
+        } satisfies Record<SectionKey, string>;
+    }, []);
+
     useEffect(() => {
         let mounted = true;
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -812,6 +846,7 @@ export default function Home() {
                 <HomeGamesSection
                     sectionKey="trending"
                     title="Trending ahora"
+                    searchHref={sectionSearchHref.trending}
                     games={trendingGames}
                     viewMode={sectionViewModes.trending}
                     gameStatusById={gameStatusById}
@@ -821,13 +856,14 @@ export default function Home() {
                 {/* <SectionDivider label="Radar visual" />
                 <SpotlightMosaic games={visualShowcaseGames} onOpenGame={(gameId) => router.push(`/game/${gameId}`)} /> */}
 
-              
+                    {/* section nuevos lanzamientos */}
 
                 <HomeGamesSection
-                    sectionKey="upcomingAnticipated"
-                    title="Futuros lanzamientos más esperados"
-                    games={upcomingAnticipatedGames}
-                    viewMode={sectionViewModes.upcomingAnticipated}
+                    sectionKey="newReleases"
+                    title="Nuevos lanzamientos"
+                    searchHref={sectionSearchHref.newReleases}
+                    games={newReleaseGames}
+                    viewMode={sectionViewModes.newReleases}
                     gameStatusById={gameStatusById}
                     onGameStatusChange={handleGameStatusChange}
                     onChangeView={handleChangeSectionView}
@@ -877,6 +913,7 @@ export default function Home() {
                 <HomeGamesSection
                     sectionKey="topRated"
                     title="Mejor valorados"
+                    searchHref={sectionSearchHref.topRated}
                     games={topRatedGames}
                     viewMode={sectionViewModes.topRated}
                     gameStatusById={gameStatusById}
@@ -884,10 +921,11 @@ export default function Home() {
                     onChangeView={handleChangeSectionView}
                 />
                 <HomeGamesSection
-                    sectionKey="newReleases"
-                    title="Nuevos lanzamientos"
-                    games={newReleaseGames}
-                    viewMode={sectionViewModes.newReleases}
+                    sectionKey="upcomingAnticipated"
+                    title="Futuros lanzamientos más esperados"
+                    searchHref={sectionSearchHref.upcomingAnticipated}
+                    games={upcomingAnticipatedGames}
+                    viewMode={sectionViewModes.upcomingAnticipated}
                     gameStatusById={gameStatusById}
                     onGameStatusChange={handleGameStatusChange}
                     onChangeView={handleChangeSectionView}
@@ -904,6 +942,7 @@ export default function Home() {
                 <HomeGamesSection
                     sectionKey="indie"
                     title="Indie destacados"
+                    searchHref={sectionSearchHref.indie}
                     games={indieGames}
                     viewMode={sectionViewModes.indie}
                     gameStatusById={gameStatusById}

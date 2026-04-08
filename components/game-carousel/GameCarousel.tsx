@@ -25,6 +25,8 @@ interface GameCarouselProps {
     onGameStatusChange?: (gameId: number, next: { isPlayed: boolean; isWishlist: boolean }) => void;
     globalStatusLoading?: boolean;
     onGlobalStatusLoadingChange?: (loading: boolean) => void;
+    cardClassName?: string;
+    cardMediaClassName?: string;
 }
 
 /* Lines 12-25 omitted */
@@ -455,6 +457,8 @@ export default function GameCarousel({
     onGameStatusChange,
     globalStatusLoading,
     onGlobalStatusLoadingChange,
+    cardClassName,
+    cardMediaClassName,
 }: GameCarouselProps) {
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -544,6 +548,8 @@ export default function GameCarousel({
                             onStatusChange={onGameStatusChange}
                             globalStatusLoading={globalStatusLoading}
                             onGlobalStatusLoadingChange={onGlobalStatusLoadingChange}
+                            className={cardClassName}
+                            mediaClassName={cardMediaClassName}
                         />
                     );
                 })}
