@@ -5,10 +5,7 @@ import GameCarousel from "@/components/game-carousel/GameCarousel";
 import { GameCard } from "@/components/game-carousel/GameCarousel";
 import { Game } from "@/models/Game";
 import { gameService } from "@/services/GameService";
-import { gameResultService } from "@/services/GameResultService";
 import { authService } from "@/services/AuthService";
-import { GameResultModel } from "@/models/GameResultModel";
-import { getGameResultFlags, getGameResultGameId } from "@/services/GameResultState";
 import Footer from "@/shared/footer/Footer";
 import Link from "next/link";
 import { MouseEvent, useEffect, useMemo, useState } from "react";
@@ -93,18 +90,6 @@ const HUB_MISSIONS: HubMission[] = [
         cta: "Comenzar",
     },
 ];
-
-const mapGameResultStatuses = (list: GameResultModel[]): Record<string, GameStatusFlags> => {
-    return list.reduce<Record<string, GameStatusFlags>>((accumulator, item) => {
-        const gameId = getGameResultGameId(item);
-        if (!gameId) {
-            return accumulator;
-        }
-
-        accumulator[gameId] = getGameResultFlags(item);
-        return accumulator;
-    }, {});
-};
 
 function SectionDivider({ label }: { label: string }) {
     return (
@@ -642,6 +627,13 @@ export default function Home() {
         }));
     };
 
+    const formatDate = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    };
+
     useEffect(() => {
         let mounted = true;
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -682,22 +674,56 @@ export default function Home() {
             try {
                 await authService.checkUser();
 
-                const [trendingData, topRatedData, newReleaseData, upcomingAnticipatedData, indieData, gameResultList] = await Promise.all([
-                    gameService.getTrendingGames(),
-                    gameService.getTopRatedGames(),
-                    gameService.getRecentlyReleasedGames(),
-                    gameService.getMostAnticipatedUpcomingGames(),
-                    gameService.getGamesByGenre("indie"),
-                    gameResultService.getAll().catch(() => []),
+                const today = new Date();
+
+                const oneYearAgo = new Date(today);
+                oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+                const sixMonthsAgo = new Date(today);
+                sixMonthsAgo.setMonth(today.getMonth() - 6);
+
+                const oneYearFromNow = new Date(today);
+                oneYearFromNow.setFullYear(today.getFullYear() + 1);
+
+                const [trendingData, topRatedData, newReleaseData, upcomingAnticipatedData, indieData] = await Promise.all([
+                    gameService.searchGames({
+                        page: 1,
+                        pageSize: 20,
+                        ordering: "-added",
+                        dates: `${formatDate(oneYearAgo)},${formatDate(today)}`,
+                    }),
+                    gameService.searchGames({
+                        page: 1,
+                        pageSize: 20,
+                        ordering: "-rating",
+                    }),
+                    gameService.searchGames({
+                        page: 1,
+                        pageSize: 20,
+                        ordering: "-released",
+                        dates: `${formatDate(sixMonthsAgo)},${formatDate(today)}`,
+                    }),
+                    gameService.searchGames({
+                        page: 1,
+                        pageSize: 20,
+                        ordering: "-added",
+                        dates: `${formatDate(today)},${formatDate(oneYearFromNow)}`,
+                    }),
+                    gameService.searchGames({
+                        page: 1,
+                        pageSize: 20,
+                        genres: "indie",
+                        ordering: "-added",
+                    }),
                 ]);
 
                 console.log(trendingData);
 
-                const trending = trendingData?.results || [];
-                const topRated = topRatedData?.results || [];
-                const newReleases = newReleaseData?.results || [];
-                const upcomingAnticipated = upcomingAnticipatedData?.results || [];
-                const indie = indieData?.results || [];
+                const trending = Array.isArray(trendingData?.items) ? trendingData.items : [];
+                const topRated = Array.isArray(topRatedData?.items) ? topRatedData.items : [];
+                const newReleases = Array.isArray(newReleaseData?.items) ? newReleaseData.items : [];
+                const upcomingAnticipated = Array.isArray(upcomingAnticipatedData?.items) ? upcomingAnticipatedData.items : [];
+                const indie = Array.isArray(indieData?.items) ? indieData.items : [];
 
                 setTrendingGames(trending);
                 setTopRatedGames(topRated);
@@ -705,7 +731,6 @@ export default function Home() {
                 setUpcomingAnticipatedGames(upcomingAnticipated);
                 setIndieGames(indie);
                 setFeaturedGame(trending[0] || topRated[0] || newReleases[0] || null);
-                setGameStatusById(mapGameResultStatuses(gameResultList));
             } catch (error) {
                 const status = (error as { status?: number })?.status;
                 if (status === 401) {
