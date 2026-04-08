@@ -2,13 +2,20 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import Footer from "@/shared/footer/Footer";
 import { gameService, GenreListItem } from "@/services/GameService";
 
 export default function SearchGenres() {
+    const router = useRouter();
     const [genres, setGenres] = useState<GenreListItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const goToSearchByGenre = (genreId: number) => {
+        const query = new URLSearchParams({ genres: String(genreId) });
+        router.push(`/search?${query.toString()}`);
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -55,9 +62,9 @@ export default function SearchGenres() {
 
                 <section>
                     {loading && (
-                        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {Array.from({ length: 12 }).map((_, index) => (
-                                <div key={`genre-skeleton-${index}`} className="w-full aspect-[4/3] rounded-xl border border-gray-700 bg-black/20 animate-pulse" />
+                                <div key={`genre-skeleton-${index}`} className="h-52 rounded-xl border border-gray-700 bg-black/20 animate-pulse" />
                             ))}
                         </div>
                     )}
@@ -75,11 +82,20 @@ export default function SearchGenres() {
                     )}
 
                     {!loading && !error && genres.length > 0 && (
-                        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                             {genres.map((genre) => (
                                 <article
                                     key={genre.id}
-                                    className="group relative overflow-hidden rounded-xl border border-white/10 w-full aspect-[4/3]"
+                                    className="group relative overflow-hidden rounded-xl border border-white/10 min-h-52 cursor-pointer"
+                                    role="button"
+                                    tabIndex={0}
+                                    onClick={() => goToSearchByGenre(genre.id)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === "Enter" || event.key === " ") {
+                                            event.preventDefault();
+                                            goToSearchByGenre(genre.id);
+                                        }
+                                    }}
                                 >
                                     <Image
                                         src={genre.image_background || "/Logo.png"}

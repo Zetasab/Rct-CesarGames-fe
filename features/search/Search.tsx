@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, MouseEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { GameCard, GameCardSkeleton } from "@/components/game-carousel/GameCarousel";
 import Footer from "@/shared/footer/Footer";
 import { InputText } from "primereact/inputtext";
@@ -29,7 +30,7 @@ import { useAuth } from "@/context/AuthContext";
 type GameStatusFlags = { isPlayed: boolean; isWishlist: boolean };
 type SelectOption = { label: string; value: string };
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 21;
 
 const ORDERING_OPTIONS: Array<{ label: string; value: string }> = [
     { label: "Nombre (A-Z)", value: "name" },
@@ -50,7 +51,10 @@ const ORDERING_OPTIONS: Array<{ label: string; value: string }> = [
 
 export default function Search() {
     const { logout } = useAuth();
+    const router = useRouter();
+    const pathname = usePathname();
     const hasInitializedAutoSearch = useRef(false);
+    const isInitializingFromUrl = useRef(true);
     const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
     const [query, setQuery] = useState("");
     const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
@@ -75,6 +79,51 @@ export default function Search() {
 
     const hasPreviousPage = page > 1;
     const hasNextPage = page * PAGE_SIZE < count;
+
+    const pushSearchParamsToUrl = useCallback((params: SearchGamesParams) => {
+        const urlParams = new URLSearchParams();
+
+        if (params.search?.trim()) {
+            urlParams.set("q", params.search.trim());
+        }
+
+        if (params.searchPrecise) {
+            urlParams.set("precise", "1");
+        }
+
+        if (params.searchExact) {
+            urlParams.set("exact", "1");
+        }
+
+        if (params.genres?.trim()) {
+            urlParams.set("genres", params.genres.trim());
+        }
+
+        if (params.platforms?.trim()) {
+            urlParams.set("platforms", params.platforms.trim());
+        }
+
+        if (params.stores?.trim()) {
+            urlParams.set("stores", params.stores.trim());
+        }
+
+        if (params.ordering?.trim()) {
+            urlParams.set("ordering", params.ordering.trim());
+        }
+
+        if (params.dates?.trim()) {
+            urlParams.set("dates", params.dates.trim());
+        }
+
+        if ((params.page ?? 1) > 1) {
+            urlParams.set("page", String(params.page));
+        }
+
+        const queryString = urlParams.toString();
+        const nextUrl = queryString ? `${pathname}?${queryString}` : pathname;
+
+        router.replace(nextUrl, { scroll: false });
+    }, [pathname, router]);
 
     const datesFilter = useMemo(() => {
         const formatDate = (value: Date) => {
@@ -132,6 +181,8 @@ export default function Search() {
             ...overrides,
         };
 
+        pushSearchParamsToUrl(params);
+
         try {
             const response: RawgPaginatedResponse<Game> = await gameService.searchGames(params);
             const safeResults = Array.isArray(response.items) ? response.items : [];
@@ -146,7 +197,7 @@ export default function Search() {
         } finally {
             setLoading(false);
         }
-    }, [datesFilter, ordering, query, searchExact, searchPrecise, selectedGenres, selectedPlatforms, selectedStores]);
+    }, [datesFilter, ordering, pushSearchParamsToUrl, query, searchExact, searchPrecise, selectedGenres, selectedPlatforms, selectedStores]);
 
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -231,6 +282,96 @@ export default function Search() {
 
         hasInitializedAutoSearch.current = true;
 
+        const parseBooleanParam = (value: string | null): boolean => {
+            if (!value) {
+                return false;
+            }
+
+            const normalized = value.trim().toLowerCase();
+            return normalized === "1" || normalized === "true";
+        };
+
+        const parseCsvParam = (value: string | null): string[] => {
+            if (!value?.trim()) {
+                return [];
+            }
+
+            return value
+                .split(",")
+                .map((item) => item.trim())
+                .filter(Boolean);
+        };
+
+        const parseDateRangeParam = (value: string | null): Date[] | null => {
+            if (!value?.trim()) {
+                return null;
+            }
+
+            const [fromRaw, toRaw] = value.split(",").map((item) => item.trim());
+
+            if (!fromRaw || !toRaw) {
+                return null;
+            }
+
+            const from = new Date(`${fromRaw}T00:00:00`);
+            const to = new Date(`${toRaw}T00:00:00`);
+
+            if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || from > to) {
+                return null;
+            }
+
+            return [from, to];
+        };
+
+        const readUrlInitialState = () => {
+            if (typeof window === "undefined") {
+                return {
+                    initialPage: 1,
+                    initialOverrides: {},
+                };
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+
+            const initialQuery = urlParams.get("q")?.trim() ?? "";
+            const initialGenres = parseCsvParam(urlParams.get("genres"));
+            const initialPlatforms = parseCsvParam(urlParams.get("platforms"));
+            const initialStores = parseCsvParam(urlParams.get("stores"));
+            const initialOrdering = urlParams.get("ordering")?.trim() ?? "";
+            const initialDatesParam = urlParams.get("dates")?.trim() ?? "";
+            const initialDateRange = parseDateRangeParam(initialDatesParam);
+            const initialSearchPrecise = parseBooleanParam(urlParams.get("precise"));
+            const initialSearchExact = parseBooleanParam(urlParams.get("exact"));
+            const parsedPage = Number(urlParams.get("page"));
+            const initialPage = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+            setQuery(initialQuery);
+            setSelectedGenres(initialGenres);
+            setSelectedPlatforms(initialPlatforms);
+            setSelectedStores(initialStores);
+            setOrdering(initialOrdering);
+            setDateRange(initialDateRange);
+            setSearchPrecise(initialSearchPrecise);
+            setSearchExact(initialSearchExact);
+            setPage(initialPage);
+
+            return {
+                initialPage,
+                initialOverrides: {
+                    search: initialQuery || undefined,
+                    genres: initialGenres.join(",") || undefined,
+                    platforms: initialPlatforms.join(",") || undefined,
+                    stores: initialStores.join(",") || undefined,
+                    ordering: initialOrdering || undefined,
+                    dates: initialDatesParam || undefined,
+                    searchPrecise: initialSearchPrecise,
+                    searchExact: initialSearchExact,
+                } satisfies Partial<SearchGamesParams>,
+            };
+        };
+
+        const { initialPage, initialOverrides } = readUrlInitialState();
+
         const initialize = async () => {
             try {
                 const isConnected = await authService.checkUser();
@@ -249,15 +390,19 @@ export default function Search() {
                 }
             }
 
-            await loadGameStatuses();
-            await runSearch(1);
+            try {
+                await loadGameStatuses();
+                await runSearch(initialPage, initialOverrides);
+            } finally {
+                isInitializingFromUrl.current = false;
+            }
         };
 
         void initialize();
     }, [loadGameStatuses, logout, runSearch]);
 
     useEffect(() => {
-        if (!hasInitializedAutoSearch.current) {
+        if (!hasInitializedAutoSearch.current || isInitializingFromUrl.current) {
             return;
         }
 
@@ -435,7 +580,7 @@ export default function Search() {
                 <section>
                     {loading && (
                         <div className="grid grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(500px,500px))] gap-4 justify-center justify-items-center py-2">
-                            {Array.from({ length: 8 }).map((_, index) => (
+                            {Array.from({ length: 9 }).map((_, index) => (
                                 <GameCardSkeleton
                                     key={`search-skeleton-${index}`}
                                     className="w-full max-w-70 lg:w-125 lg:max-w-125"

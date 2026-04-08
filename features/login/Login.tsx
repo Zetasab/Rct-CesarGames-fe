@@ -138,7 +138,7 @@ export default function Login() {
                                     checked={rememberMe}
                                     onChange={e => setRememberMe(e.checked || false)}
                                 />
-                                <label htmlFor="rememberMe" className="ml-2 text-white">Recordar email</label>
+                                <label htmlFor="rememberMe" className="ml-2 text-white">Recordar credenciales</label>
                             </div>
                             <div className='mt-5'>
                                 <CustomLaddaButton
