@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { User } from '@/models/User';
@@ -87,11 +87,17 @@ const getPersistedAuth = (): { user: User | null; isAuthenticated: boolean } => 
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-    const initialAuth = getPersistedAuth();
-    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(initialAuth.isAuthenticated);
-    const [user, setUser] = useState<User | null>(initialAuth.user);
-    const [loading] = useState<boolean>(false);
+    const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
     const router = useRouter();
+
+    useEffect(() => {
+        const initialAuth = getPersistedAuth();
+        setIsAuthenticated(initialAuth.isAuthenticated);
+        setUser(initialAuth.user);
+        setLoading(false);
+    }, []);
 
     const login = (userData: User) => {
         const normalizedUser = normalizeUserSession(userData);
@@ -106,6 +112,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         sessionStorage.removeItem('token');
         setUser(normalizedUser);
         setIsAuthenticated(true);
+        setLoading(false);
         router.push('/');
     };
 
@@ -116,6 +123,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         sessionStorage.removeItem('token');
         setUser(null);
         setIsAuthenticated(false);
+        setLoading(false);
         router.push('/login');
     };
 
