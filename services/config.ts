@@ -4,7 +4,7 @@ export const getBaseUrl = () => {
     // process.env.NODE_ENV is available in Next.js
     
     if (process.env.NODE_ENV === 'production') {
-        return 'https://cesarsobapi-csa-workspace.up.railway.app';
+        return 'https://cesarsobapigateway.up.railway.app';
     }
     
     // Default to localhost for development
