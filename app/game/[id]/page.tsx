@@ -1,5 +1,5 @@
 
-import rawgSnapshot from '@/test.json';
+import rawgSnapshot from '../../../test.json';
 import { genresCatalog, platformsCatalog, storesCatalog, tagsCatalog } from '@/app/static/catalog-data';
 import DetailedGame from "@/features/detailed-game/DetailedGame";
 
