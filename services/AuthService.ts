@@ -1,6 +1,12 @@
 import { BaseService } from './BaseService';
 import { LoginRequest } from '@/models/LoginRequest';
+import { RegisterRequest } from '@/models/RegisterRequest';
+import { VerifyEmailRequest } from '@/models/VerifyEmailRequest';
 import { User } from '@/models/User';
+
+interface MessageResponse {
+    message: string;
+}
 
 class AuthService extends BaseService {
     constructor() {
@@ -21,8 +27,12 @@ class AuthService extends BaseService {
     }
     
 
-    async register(userData: LoginRequest): Promise<User> {
-        return this.post<User>('/register', userData);
+    async register(userData: RegisterRequest): Promise<MessageResponse> {
+        return this.post<MessageResponse>('/register', userData);
+    }
+
+    async verifyEmail(data: VerifyEmailRequest): Promise<MessageResponse> {
+        return this.post<MessageResponse>('/verify-email', data);
     }
 
     async getCurrentUser(): Promise<User> {

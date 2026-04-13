@@ -12,7 +12,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const isLoginPage = normalizedPathname === '/login' || normalizedPathname.endsWith('/login');
     const isLegalPage = normalizedPathname === '/legal' || normalizedPathname.endsWith('/legal');
     const isForgotPasswordPage = normalizedPathname === '/forgot-password' || normalizedPathname.endsWith('/forgot-password');
-    const isRegisterPage = normalizedPathname === '/register' || normalizedPathname.endsWith('/register');
+    const isRegisterPage = normalizedPathname === '/register' || normalizedPathname.startsWith('/register/');
     const isPublicPage = isLoginPage || isLegalPage || isForgotPasswordPage || isRegisterPage;
 
     useEffect(() => {
