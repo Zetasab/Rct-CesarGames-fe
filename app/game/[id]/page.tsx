@@ -1,10 +1,21 @@
 
-import rawgSnapshot from '../../../test.json';
+import fs from 'node:fs';
+import path from 'node:path';
 import { genresCatalog, platformsCatalog, storesCatalog, tagsCatalog } from '@/app/static/catalog-data';
 import DetailedGame from "@/features/detailed-game/DetailedGame";
 
 type SnapshotGame = { slug?: string };
 type SnapshotData = { results?: SnapshotGame[] };
+
+const readSnapshot = (): SnapshotData => {
+  try {
+    const snapshotPath = path.join(process.cwd(), 'test.json');
+    const fileContent = fs.readFileSync(snapshotPath, 'utf-8');
+    return JSON.parse(fileContent) as SnapshotData;
+  } catch {
+    return {};
+  }
+};
 
 export function generateStaticParams(): Array<{ id: string }> {
   const slugSet = new Set<string>();
@@ -27,7 +38,7 @@ export function generateStaticParams(): Array<{ id: string }> {
   tagsCatalog.forEach((item) => item.games.forEach((game) => collect(game.slug)));
   storesCatalog.forEach((item) => item.games.forEach((game) => collect(game.slug)));
 
-  const snapshot = rawgSnapshot as SnapshotData;
+  const snapshot = readSnapshot();
   snapshot.results?.forEach((game) => collect(game.slug));
 
   // Keep this slug available to avoid export errors for direct access from shared links.
