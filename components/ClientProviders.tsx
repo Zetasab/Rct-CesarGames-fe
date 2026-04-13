@@ -12,7 +12,9 @@ export default function ClientProviders({ children }: { children: React.ReactNod
     const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
     const isLoginPage = normalizedPathname === '/login' || normalizedPathname.endsWith('/login');
     const isLegalPage = normalizedPathname === '/legal' || normalizedPathname.endsWith('/legal');
-    const hideNavbar = isLoginPage || isLegalPage;
+    const isForgotPasswordPage = normalizedPathname === '/forgot-password' || normalizedPathname.endsWith('/forgot-password');
+    const isRegisterPage = normalizedPathname === '/register' || normalizedPathname.endsWith('/register');
+    const hideNavbar = isLoginPage || isLegalPage || isForgotPasswordPage || isRegisterPage;
 
     useEffect(() => {
         if (typeof window === 'undefined') {

@@ -438,17 +438,19 @@ export default function Search() {
                         Filtros: nombre, precisión, exactitud, plataformas, stores, géneros, fechas y ordenación.
                     </p>
 
-                    <Button
-                        type="button"
-                        onClick={() => setIsMobileFiltersOpen((current) => !current)}
-                        className="md:hidden w-full mb-4"
-                        outlined
-                        label="Filtros"
-                        icon={`pi ${isMobileFiltersOpen ? "pi-chevron-up" : "pi-chevron-down"}`}
-                        iconPos="right"
-                        aria-expanded={isMobileFiltersOpen}
-                        aria-controls="search-filters-form"
-                    />
+                    <div className="block md:hidden w-full mb-4">
+                        <Button
+                            type="button"
+                            onClick={() => setIsMobileFiltersOpen((current) => !current)}
+                            className="w-full"
+                            outlined
+                            label="Filtros"
+                            icon={`pi ${isMobileFiltersOpen ? "pi-chevron-up" : "pi-chevron-down"}`}
+                            iconPos="right"
+                            aria-expanded={isMobileFiltersOpen}
+                            aria-controls="search-filters-form"
+                        />
+                    </div>
 
                     <form
                         id="search-filters-form"

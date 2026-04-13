@@ -179,6 +179,20 @@ export default function Login() {
                                     </Link>
                                 </label>
                             </div>
+                            <div className="mt-2 flex flex-col gap-1 text-sm">
+                                <Link
+                                    href="/forgot-password"
+                                    className="text-[#ff4200] underline hover:text-[#ff7a4d] transition-colors"
+                                >
+                                    ¿Has olvidado tu contraseña?
+                                </Link>
+                                <Link
+                                    href="/register"
+                                    className="text-[#ff4200] underline hover:text-[#ff7a4d] transition-colors"
+                                >
+                                    Crear una cuenta nueva
+                                </Link>
+                            </div>
                             <div className='mt-5'>
                                 <CustomLaddaButton
                                     label="Iniciar Sesión"
