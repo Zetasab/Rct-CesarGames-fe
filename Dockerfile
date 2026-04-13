@@ -1,26 +1,17 @@
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS builder
 WORKDIR /app
+
 COPY package*.json ./
 RUN npm ci
 
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
 
-FROM node:20-alpine AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-ENV HOSTNAME=0.0.0.0
-ENV PORT=3000
+FROM nginx:1.27-alpine AS runner
+WORKDIR /usr/share/nginx/html
 
-COPY package*.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN rm -rf ./*
+COPY --from=builder /app/out ./
 
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.ts ./next.config.ts
-
-EXPOSE 3000
-CMD ["npm", "run", "start"]
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
