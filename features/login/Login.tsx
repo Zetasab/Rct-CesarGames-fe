@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import Link from 'next/link';
 import { InputText } from 'primereact/inputtext';
 import { Checkbox } from 'primereact/checkbox';
 import { Password } from 'primereact/password';
@@ -17,6 +18,7 @@ import { extractErrorMessage } from '@/services/api-error';
 
 export default function Login() {
     const { login } = useAuth();
+    const privacyPolicyStorageKey = 'acceptedPrivacyPolicy';
     const [rememberedCredentials] = useState(() => {
         if (typeof window === 'undefined') {
             return { email: '', password: '', rememberMe: false };
@@ -34,15 +36,35 @@ export default function Login() {
     const [email, setEmail] = useState(rememberedCredentials.email);
     const [password, setPassword] = useState(rememberedCredentials.password);
     const [rememberMe, setRememberMe] = useState(rememberedCredentials.rememberMe);
+    const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(() => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+
+        return localStorage.getItem(privacyPolicyStorageKey) === 'true';
+    });
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         setStatus('idle');
         setError('');
+
+        if (!email || !password) {
+            setError('Por favor complete todos los campos');
+            return;
+        }
+
+        if (!acceptedPrivacyPolicy) {
+            setError('Debes aceptar la politica de privacidad para iniciar sesión');
+            return;
+        }
+
+        localStorage.setItem(privacyPolicyStorageKey, 'true');
+
+        setLoading(true);
 
         if (rememberMe) {
             localStorage.setItem('rememberedEmail', email);
@@ -53,39 +75,33 @@ export default function Login() {
             localStorage.removeItem('rememberedPassword');
         }
 
+        try {
+            const loginRequest: LoginRequest = {
+                Email: email,
+                Password: password
+            };
+            const user = await authService.login(loginRequest);
+            const token = user?.token || user?.Token;
 
-        if (email && password) {
-            try {
-                const loginRequest: LoginRequest = {
-                    Email: email,
-                    Password: password
-                };
-                const user = await authService.login(loginRequest);
-                const token = user?.token || user?.Token;
-
-                if (token) {
-                    sessionStorage.setItem('token', token);
-                    localStorage.removeItem('token');
-                }
-
-
-                setLoading(false);
-                setStatus('success');
-                // Si la respuesta es exitosa (200), logueamos al usuario y guardamos el token
-                // Pequeño delay para mostrar la animación de éxito
-                setTimeout(() => {
-                    login(user); // Esto probablemente desencadene la redirección en AuthGuard
-                }, 1000);
-
-            } catch (err) {
-                console.error("Login error:", err);
-                setLoading(false);
-                setStatus('error');
-                setError(extractErrorMessage(err, 'Usuario o contraseña incorrectos'));
+            if (token) {
+                sessionStorage.setItem('token', token);
+                localStorage.removeItem('token');
             }
-        } else {
+
+
             setLoading(false);
-            setError('Por favor complete todos los campos');
+            setStatus('success');
+            // Si la respuesta es exitosa (200), logueamos al usuario y guardamos el token
+            // Pequeño delay para mostrar la animación de éxito
+            setTimeout(() => {
+                login(user); // Esto probablemente desencadene la redirección en AuthGuard
+            }, 1000);
+
+        } catch (err) {
+            console.error("Login error:", err);
+            setLoading(false);
+            setStatus('error');
+            setError(extractErrorMessage(err, 'Usuario o contraseña incorrectos'));
         }
     };
 
@@ -140,6 +156,28 @@ export default function Login() {
                                     onChange={e => setRememberMe(e.checked || false)}
                                 />
                                 <label htmlFor="rememberMe" className="ml-2 text-white">Recordar credenciales</label>
+                            </div>
+                            <div className="flex items-start gap-2 mt-1">
+                                <Checkbox
+                                    inputId="acceptedPrivacyPolicy"
+                                    checked={acceptedPrivacyPolicy}
+                                    onChange={(e) => {
+                                        setAcceptedPrivacyPolicy(e.checked || false);
+                                        setError('');
+                                    }}
+                                    required
+                                />
+                                <label htmlFor="acceptedPrivacyPolicy" className="ml-2 text-white text-sm leading-6">
+                                    He leido y acepto la{' '}
+                                    <Link
+                                        href="/legal"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-[#ff4200] underline hover:text-[#ff7a4d] transition-colors"
+                                    >
+                                        politica de privacidad
+                                    </Link>
+                                </label>
                             </div>
                             <div className='mt-5'>
                                 <CustomLaddaButton

@@ -31,6 +31,9 @@ export default function Footer() {
                         <Link href="/" className="text-gray-300 hover:text-white transition-colors">
                             Catálogo
                         </Link>
+                        <Link href="/legal" className="text-gray-300 hover:text-white transition-colors">
+                            Privacidad y Términos
+                        </Link>
                     </div>
                 </div>
 

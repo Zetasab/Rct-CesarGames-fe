@@ -11,6 +11,8 @@ export default function ClientProviders({ children }: { children: React.ReactNod
     const pathname = usePathname();
     const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
     const isLoginPage = normalizedPathname === '/login' || normalizedPathname.endsWith('/login');
+    const isLegalPage = normalizedPathname === '/legal' || normalizedPathname.endsWith('/legal');
+    const hideNavbar = isLoginPage || isLegalPage;
 
     useEffect(() => {
         if (typeof window === 'undefined') {
@@ -44,7 +46,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
         <PrimeReactProvider value={{ ripple: true }}>
             <AuthProvider>
                 <AuthGuard>
-                    {!isLoginPage && <Navbar />}
+                    {!hideNavbar && <Navbar />}
                     {children}
                 </AuthGuard>
             </AuthProvider>
