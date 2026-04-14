@@ -1,10 +1,7 @@
 import type { NextConfig } from "next";
 
-const isGithubActions = process.env.GITHUB_ACTIONS === "true";
-const repoName = process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "";
 const envBasePath = process.env.NEXT_PUBLIC_BASE_PATH;
-const resolvedBasePath =
-  envBasePath ?? (isGithubActions && repoName ? `/${repoName}` : "");
+const resolvedBasePath = envBasePath ?? "";
 const normalizedBasePath =
   resolvedBasePath && resolvedBasePath !== "/"
     ? resolvedBasePath.replace(/\/$/, "")
