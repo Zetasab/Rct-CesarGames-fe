@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { InputText } from "primereact/inputtext";
 import { Password } from "primereact/password";
 import { Button } from "primereact/button";
+import { Checkbox } from "primereact/checkbox";
 import { authService } from "@/services/AuthService";
 import { extractErrorMessage } from "@/services/api-error";
 import type { RegisterRequest } from "@/models/RegisterRequest";
@@ -21,10 +22,18 @@ const passwordRules = [
 
 export default function RegisterPage() {
   const router = useRouter();
+  const privacyPolicyStorageKey = "acceptedPrivacyPolicy";
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [repeatPassword, setRepeatPassword] = useState("");
+  const [acceptedPrivacyPolicy, setAcceptedPrivacyPolicy] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    return localStorage.getItem(privacyPolicyStorageKey) === "true";
+  });
   const [verificationCode, setVerificationCode] = useState("");
   const [awaitingVerification, setAwaitingVerification] = useState(false);
   const [loadingRegister, setLoadingRegister] = useState(false);
@@ -58,6 +67,13 @@ export default function RegisterPage() {
       setErrorMessage("La contraseña no cumple los requisitos de seguridad.");
       return;
     }
+
+    if (!acceptedPrivacyPolicy) {
+      setErrorMessage("Debes aceptar la politica de privacidad para crear la cuenta.");
+      return;
+    }
+
+    localStorage.setItem(privacyPolicyStorageKey, "true");
 
     setLoadingRegister(true);
 
@@ -201,6 +217,29 @@ export default function RegisterPage() {
                   </li>
                 ))}
               </ul>
+            </div>
+
+            <div className="flex items-start gap-2">
+              <Checkbox
+                inputId="acceptedPrivacyPolicy"
+                checked={acceptedPrivacyPolicy}
+                onChange={(event) => {
+                  setAcceptedPrivacyPolicy(event.checked || false);
+                  setErrorMessage("");
+                }}
+                required
+              />
+              <label htmlFor="acceptedPrivacyPolicy" className="text-sm text-gray-200 leading-6">
+                He leido y acepto la{" "}
+                <Link
+                  href="/legal"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#ff4200] underline hover:text-[#ff7a4d] transition-colors"
+                >
+                  politica de privacidad
+                </Link>
+              </label>
             </div>
 
             <Button

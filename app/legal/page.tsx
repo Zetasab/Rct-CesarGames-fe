@@ -84,6 +84,16 @@ export default function LegalPage() {
             Podemos actualizar esta politica de privacidad y condiciones de uso en
             cualquier momento. Los cambios se publicaran en esta misma pagina.
           </p>
+
+          <h2 className="mt-6 text-lg md:text-xl font-semibold text-white">
+            7. Naturaleza del proyecto y seguridad
+          </h2>
+          <p>
+            Este sitio es un proyecto personal y no tiene finalidad comercial.
+            Aunque se aplican medidas para proteger los datos sensibles, su
+            objetivo principal es de aprendizaje, por lo que es posible que no
+            cuente con las directivas o practicas de seguridad mas avanzadas.
+          </p>
         </section>
       </main>
 

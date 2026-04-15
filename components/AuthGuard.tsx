@@ -8,6 +8,10 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     const { isAuthenticated, loading } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
+    const hasToken =
+        typeof window !== 'undefined' &&
+        Boolean(localStorage.getItem('token') || sessionStorage.getItem('token'));
+    const canAccessProtectedRoutes = isAuthenticated && hasToken;
     const normalizedPathname = pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
     const isLoginPage = normalizedPathname === '/login' || normalizedPathname.endsWith('/login');
     const isLegalPage = normalizedPathname === '/legal' || normalizedPathname.endsWith('/legal');
@@ -17,13 +21,11 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         if (!loading) {
-            if (!isAuthenticated && !isPublicPage) {
+            if (!canAccessProtectedRoutes && !isPublicPage) {
                 router.push('/login');
-            } else if (isAuthenticated && isLoginPage) {
-                router.push('/');
             }
         }
-    }, [isAuthenticated, isLoginPage, isPublicPage, loading, router]);
+    }, [canAccessProtectedRoutes, isPublicPage, loading, router]);
 
     if (loading) {
         return (
@@ -34,12 +36,7 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     // Don't render protected content if not authenticated
-    if (!isAuthenticated && !isPublicPage) {
-        return null;
-    }
-
-    // Don't render login page if already authenticated
-    if (isAuthenticated && isLoginPage) {
+    if (!canAccessProtectedRoutes && !isPublicPage) {
         return null;
     }
 

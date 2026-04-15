@@ -113,9 +113,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         setUser(normalizedUser);
-        setIsAuthenticated(true);
+        setIsAuthenticated(Boolean(token));
         setLoading(false);
-        router.push('/');
+
+        if (token) {
+            router.push('/');
+        }
     };
 
     const logout = () => {
