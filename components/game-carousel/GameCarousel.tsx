@@ -10,6 +10,7 @@ import { gameResultService } from '@/services/GameResultService';
 import { extractErrorMessage } from '@/services/api-error';
 import { useAuth } from '@/context/AuthContext';
 import { isViewerUser } from '@/services/user-role';
+import { getGameDetailHref, getStaticGameSlug } from '@/services/game-detail-route';
 import {
     findGameResultByGameId,
     getGameResultFlags,
@@ -298,6 +299,8 @@ export const GameCard = memo(({
     const activeImage = slideshowActive && game.short_screenshots?.length 
         ? game.short_screenshots[currentShotIndex].image 
         : (game.background_image || '/placeholder.jpg');
+    const gameHref = getGameDetailHref(game);
+    const gameDataSlug = getStaticGameSlug(game.slug);
 
     return (
         <>
@@ -318,8 +321,8 @@ export const GameCard = memo(({
                 onPointerCancel={stopLongPress}
             >
             <Link
-                href={`/game/${game.slug || game.id}`}
-                data-game-slug={game.slug || String(game.id)}
+                href={gameHref}
+                data-game-slug={gameDataSlug || undefined}
                 className="absolute inset-0 z-[25]"
                 aria-label={`Ver ${game.name}`}
                 onClick={handleLinkClick}

@@ -2,6 +2,7 @@
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { getGameDetailHref } from '@/services/game-detail-route';
 
 interface GameItem {
     id: number;
@@ -72,7 +73,7 @@ const HeroHeader = ({ items }: HeroHeaderProps) => {
                <h1 className="text-2xl md:text-6xl font-bold text-white mb-2 md:mb-4 drop-shadow-lg transition-all duration-500">{currentGame.name}</h1>
                <button 
                    className="p-button font-bold hover:brightness-110 mt-2 md:mt-4 text-sm px-4 py-2 md:text-base md:px-6 md:py-3"
-                   onClick={() => router.push(`/game/${currentGame.slug || currentGame.id}`)}
+                   onClick={() => router.push(getGameDetailHref(currentGame))}
                >
                    Ver detalles
                </button>

@@ -1,8 +1,7 @@
-
 import fs from 'node:fs';
 import path from 'node:path';
 import { genresCatalog, platformsCatalog, storesCatalog, tagsCatalog } from '@/app/static/catalog-data';
-import DetailedGame from "@/features/detailed-game/DetailedGame";
+import DetailedGame from '@/features/detailed-game/DetailedGame';
 
 type SnapshotGame = { slug?: string };
 type SnapshotData = { results?: SnapshotGame[] };
@@ -17,7 +16,7 @@ const readSnapshot = (): SnapshotData => {
   }
 };
 
-export function generateStaticParams(): Array<{ id: string }> {
+export function generateStaticParams(): Array<{ slug: string }> {
   const slugSet = new Set<string>();
 
   const collect = (slug: unknown) => {
@@ -43,11 +42,12 @@ export function generateStaticParams(): Array<{ id: string }> {
 
   // Keep this slug available to avoid export errors for direct access from shared links.
   collect('mouse-3');
+  collect('replaced');
 
-  return Array.from(slugSet).map((id) => ({ id }));
+  return Array.from(slugSet).map((slug) => ({ slug }));
 }
 
-export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  const { id: slug } = await params;
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
   return <DetailedGame gameSlug={slug} />;
 }

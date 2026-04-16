@@ -136,9 +136,10 @@ export default function DetailedGame({ gameSlug }: Props) {
     };
 
     const handleGameClick = (event: MouseEvent<HTMLAnchorElement>) => {
-        const gameSlug = (event.currentTarget as HTMLAnchorElement).getAttribute('data-game-slug');
-        if (gameSlug) {
-            router.push(`/game/${gameSlug}`);
+        event.preventDefault();
+        const href = (event.currentTarget as HTMLAnchorElement).getAttribute('href');
+        if (href) {
+            router.push(href);
         }
     };
 
