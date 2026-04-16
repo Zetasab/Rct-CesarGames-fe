@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { InputText } from 'primereact/inputtext';
 import { Checkbox } from 'primereact/checkbox';
 import { Password } from 'primereact/password';
@@ -15,10 +16,15 @@ import { authService } from '@/services/AuthService';
 import { LoginRequest } from '@/models/LoginRequest';
 import { extractErrorMessage } from '@/services/api-error';
 
+interface LoginProps {
+    defaultTestMode?: boolean;
+}
 
-export default function Login() {
+export default function Login({ defaultTestMode = false }: LoginProps) {
     const { login } = useAuth();
+    const searchParams = useSearchParams();
     const privacyPolicyStorageKey = 'acceptedPrivacyPolicy';
+    const testUserEmail = 'user@cesarsobrino.es';
     const [rememberedCredentials] = useState(() => {
         if (typeof window === 'undefined') {
             return { email: '', password: '', rememberMe: false };
@@ -46,13 +52,43 @@ export default function Login() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+    const [isTestUserMode, setIsTestUserMode] = useState(defaultTestMode);
+
+    useEffect(() => {
+        if (searchParams.get('test') === 'true') {
+            setIsTestUserMode(true);
+            setEmail(testUserEmail);
+            setPassword('');
+            setRememberMe(false);
+        }
+    }, [searchParams]);
+
+    const handleToggleTestUserMode = () => {
+        setError('');
+        setStatus('idle');
+
+        setIsTestUserMode((prev) => {
+            const next = !prev;
+
+            if (next) {
+                setEmail(testUserEmail);
+                setPassword('');
+                setRememberMe(false);
+            }
+
+            return next;
+        });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setStatus('idle');
         setError('');
 
-        if (!email || !password) {
+        const submittedEmail = isTestUserMode ? testUserEmail : email.trim();
+        const submittedPassword = isTestUserMode ? '' : password;
+
+        if (!isTestUserMode && (!submittedEmail || !submittedPassword)) {
             setError('Por favor complete todos los campos');
             return;
         }
@@ -66,9 +102,9 @@ export default function Login() {
 
         setLoading(true);
 
-        if (rememberMe) {
-            localStorage.setItem('rememberedEmail', email);
-            localStorage.setItem('rememberedPassword', password);
+        if (!isTestUserMode && rememberMe) {
+            localStorage.setItem('rememberedEmail', submittedEmail);
+            localStorage.setItem('rememberedPassword', submittedPassword);
         } else {
             localStorage.removeItem('rememberedEmail');
             localStorage.removeItem('rememberedUser');
@@ -77,8 +113,8 @@ export default function Login() {
 
         try {
             const loginRequest: LoginRequest = {
-                Email: email,
-                Password: password
+                Email: submittedEmail,
+                Password: submittedPassword
             };
             const user = await authService.login(loginRequest);
             const token = user?.token || user?.Token;
@@ -119,44 +155,65 @@ export default function Login() {
                         </div>
 
                         <form onSubmit={handleSubmit} className="flex flex-col gap-5 w-full">
-                            <div className="flex flex-col gap-2">
-                                <FloatLabel>
-                                    <InputText
-                                        id="email"
-                                        type="email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => { setEmail(e.target.value); setError(''); }}
-                                        className={`w-full input-bg-transparent bg-transparent ${error ? 'p-invalid' : ''}`}
-                                    />
-                                    <label htmlFor="email">Email</label>
-                                </FloatLabel>
+                            <button
+                                type="button"
+                                onClick={handleToggleTestUserMode}
+                                className="text-[#ff4200] underline hover:text-[#ff7a4d] transition-colors text-left"
+                            >
+                                {isTestUserMode ? 'Volver al login normal' : 'Logear como usuario prueba'}
+                            </button>
 
-                            </div>
+                            {isTestUserMode ? (
+                                <div className="mt-2 text-white text-sm leading-6">
+                                    <p className="m-0">Email: {testUserEmail}</p>
+                                    <p className="m-0">Contraseña: vacia</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="flex flex-col gap-2">
+                                        <FloatLabel>
+                                            <InputText
+                                                id="email"
+                                                type="email"
+                                                required
+                                                value={email}
+                                                onChange={(e) => { setEmail(e.target.value); setError(''); }}
+                                                className={`w-full input-bg-transparent bg-transparent ${error ? 'p-invalid' : ''}`}
+                                            />
+                                            <label htmlFor="email">Email</label>
+                                        </FloatLabel>
+                                    </div>
 
-                            <div className="flex flex-col gap-2 mt-4">
-                                <FloatLabel>
-                                    <Password
-                                        value={password}
-                                        onChange={(e) => { setPassword(e.target.value); setError(''); }}
-                                        toggleMask
-                                        required
-                                        feedback={false}
-                                        className={`w-full ${error ? 'p-invalid' : ''}`}
-                                        inputClassName={`w-full input-bg-transparent bg-transparent ${error ? 'p-invalid' : ''}`}
+                                    <div className="flex flex-col gap-2 mt-4">
+                                        <FloatLabel>
+                                            <Password
+                                                value={password}
+                                                onChange={(e) => { setPassword(e.target.value); setError(''); }}
+                                                toggleMask
+                                                required
+                                                feedback={false}
+                                                className={`w-full ${error ? 'p-invalid' : ''}`}
+                                                inputClassName={`w-full input-bg-transparent bg-transparent ${error ? 'p-invalid' : ''}`}
+                                            />
+                                            <label htmlFor="password">Contraseña</label>
+                                        </FloatLabel>
+                                    </div>
+                                </>
+                            )}
+
+                            {!isTestUserMode && (
+                                <div className="flex items-center gap-2 mt-2">
+                                    <Checkbox
+                                        inputId="rememberMe"
+                                        checked={rememberMe}
+                                        onChange={e => setRememberMe(e.checked || false)}
                                     />
-                                    <label htmlFor="password">Contraseña</label>
-                                </FloatLabel>
-                            </div>
+                                    <label htmlFor="rememberMe" className="ml-2 text-white">Recordar credenciales</label>
+                                </div>
+                            )}
+
                             {error && <small className="p-error block">{error}</small>}
-                            <div className="flex items-center gap-2 mt-2">
-                                <Checkbox
-                                    inputId="rememberMe"
-                                    checked={rememberMe}
-                                    onChange={e => setRememberMe(e.checked || false)}
-                                />
-                                <label htmlFor="rememberMe" className="ml-2 text-white">Recordar credenciales</label>
-                            </div>
+
                             <div className="flex items-start gap-2 mt-1">
                                 <Checkbox
                                     inputId="acceptedPrivacyPolicy"
@@ -202,7 +259,6 @@ export default function Login() {
                                     className="w-full mt-5"
                                 />
                             </div>
-
                         </form>
                     </div>
                 </div>
