@@ -7,7 +7,7 @@
 
 <p>Por si quieres ver → <a href="https://games.cesarsobrino.es"><strong>Live Demo</strong></a></p>
 
-![video-project](video-project.gif)
+![video-project](Video-Project.gif)
 
 </div>
 
