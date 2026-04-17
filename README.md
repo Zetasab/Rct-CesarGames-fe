@@ -1,36 +1,125 @@
-<!-- This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+<div align="center">
 
-## Getting Started
+<h1>
+  <font color="#ff4200"><b>CesarSob</b></font>
+  <font color="#ededed"><b> Games</b></font>
+</h1>
 
-First, run the development server:
+<p>Por si quieres ver → <a href="https://games.cesarsobrino.es"><strong>Live Demo</strong></a></p>
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+![video-project](video-project.gif)
+
+</div>
+
+---
+
+## 📋 Descripción
+
+**CesarSob Games** es una aplicación web de catálogo de videojuegos de prueba desarrollada con tecnologías modernas. Permite explorar juegos, buscarlos por género, plataforma o tienda, ver detalles de cada título, guardar tus juegos favoritos y gestionar una cuenta de usuario con autenticación completa.
+
+El frontend se comunica con un API Gateway propio alojado en Railway, que actúa de intermediario con servicios externos de datos de videojuegos.
+
+---
+
+## 🛠️ Tecnologías utilizadas
+
+| Categoría | Tecnología |
+|---|---|
+| Framework | [Next.js 16](https://nextjs.org/) (App Router) |
+| Lenguaje | [TypeScript 5](https://www.typescriptlang.org/) |
+| UI Library | [React 19](https://react.dev/) |
+| Componentes | [PrimeReact 10](https://primereact.org/) + [PrimeIcons](https://primereact.org/icons/) |
+| Estilos | [Tailwind CSS v4](https://tailwindcss.com/) |
+| Botones animados | [react-ladda-button](https://www.npmjs.com/package/react-ladda-button) |
+| Contenerización | [Docker](https://www.docker.com/) + [Nginx](https://nginx.org/) |
+| Linting | [ESLint 9](https://eslint.org/) |
+
+---
+
+## 🗂️ Estructura del proyecto
+
+```
+├── app/                        # Rutas y páginas (Next.js App Router)
+│   ├── page.tsx                # Página principal (Home)
+│   ├── layout.tsx              # Layout global
+│   ├── globals.css             # Estilos globales y variables de color
+│   ├── game/[slug]/            # Detalle de un juego
+│   ├── search/                 # Búsqueda general
+│   ├── searchGenres/           # Búsqueda por género
+│   ├── searchPlatforms/        # Búsqueda por plataforma
+│   ├── searchStores/           # Búsqueda por tienda
+│   ├── mygames/                # Juegos guardados del usuario
+│   ├── login/                  # Inicio de sesión
+│   ├── register/               # Registro de usuario
+│   ├── forgot-password/        # Recuperación de contraseña
+│   └── legal/                  # Página legal
+│
+├── components/                 # Componentes reutilizables
+│   ├── AuthGuard.tsx           # Protección de rutas autenticadas
+│   ├── ClientProviders.tsx     # Proveedores globales de cliente
+│   ├── game-carousel/          # Carrusel de juegos
+│   └── hero-header/            # Cabecera hero de la home
+│
+├── features/                   # Lógica de negocio por sección
+│   ├── home/                   # Vista principal con carruseles
+│   ├── detailed-game/          # Vista de detalle de juego
+│   ├── search/                 # Resultados de búsqueda
+│   ├── search-genres/          # Resultados por género
+│   ├── search-platforms/       # Resultados por plataforma
+│   ├── search-stores/          # Resultados por tienda
+│   ├── mygames/                # Sección de mis juegos
+│   └── login/                  # Formulario de login
+│
+├── context/                    # Contextos de React
+│   └── AuthContext.tsx         # Estado global de autenticación
+│
+├── services/                   # Servicios y llamadas a la API
+│   ├── config.ts               # URL base por entorno
+│   ├── AuthService.ts          # Autenticación (login, registro, etc.)
+│   ├── GameService.ts          # Obtención de juegos
+│   ├── GameResultService.ts    # Resultados de búsquedas
+│   └── InfoService.ts          # Géneros, plataformas y tiendas
+│
+├── models/                     # Tipos e interfaces TypeScript
+├── shared/                     # Navbar y Footer compartidos
+├── public/                     # Recursos estáticos
+├── Dockerfile                  # Imagen Docker de producción
+└── nginx.conf                  # Configuración del servidor Nginx
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 Cómo iniciar el proyecto
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Requisitos previos
 
-## Learn More
+- [Node.js](https://nodejs.org/) v18 o superior
+- npm (incluido con Node.js)
 
-To learn more about Next.js, take a look at the following resources:
+### Instalación y arranque en desarrollo
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# 1. Instalar dependencias
+npm install
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# 2. Iniciar el servidor de desarrollo
+npm run dev
+```
 
-## Deploy on Vercel
+Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Otros comandos disponibles
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details. -->
+```bash
+# Modo desarrollo con Turbopack (más rápido)
+npm run dev:turbo
+
+# Compilar para producción
+npm run build
+
+# Iniciar en modo producción (requiere build previo)
+npm start
+
+# Ejecutar el linter
+npm run lint
+```
