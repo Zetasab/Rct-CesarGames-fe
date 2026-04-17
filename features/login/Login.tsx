@@ -11,6 +11,7 @@ import { FloatLabel } from 'primereact/floatlabel';
 import { CustomLaddaButton } from '@/components/ladda-button/CustomLaddaButton';
 import Image from 'next/image';
 import './login.css';
+import SocialLinks from '@/shared/social/SocialLinks';
 
 import { authService } from '@/services/AuthService';
 import { LoginRequest } from '@/models/LoginRequest';
@@ -24,6 +25,7 @@ export default function Login({ defaultTestMode = false }: LoginProps) {
     const { login } = useAuth();
     const searchParams = useSearchParams();
     const privacyPolicyStorageKey = 'acceptedPrivacyPolicy';
+    const projectNoticeStorageKey = 'acceptedPersonalProjectNotice';
     const testUserEmail = 'user@cesarsobrino.es';
     const [rememberedCredentials] = useState(() => {
         if (typeof window === 'undefined') {
@@ -53,6 +55,7 @@ export default function Login({ defaultTestMode = false }: LoginProps) {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [isTestUserMode, setIsTestUserMode] = useState(defaultTestMode);
+    const [showProjectNotice, setShowProjectNotice] = useState(false);
 
     useEffect(() => {
         if (searchParams.get('test') === 'true') {
@@ -62,6 +65,20 @@ export default function Login({ defaultTestMode = false }: LoginProps) {
             setRememberMe(false);
         }
     }, [searchParams]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        const alreadyAccepted = localStorage.getItem(projectNoticeStorageKey) === 'true';
+        setShowProjectNotice(!alreadyAccepted);
+    }, []);
+
+    const handleAcceptProjectNotice = () => {
+        localStorage.setItem(projectNoticeStorageKey, 'true');
+        setShowProjectNotice(false);
+    };
 
     const handleToggleTestUserMode = () => {
         setError('');
@@ -143,6 +160,35 @@ export default function Login({ defaultTestMode = false }: LoginProps) {
 
     return (
         <div className='login-container' >
+            {showProjectNotice && (
+                <div className="project-notice-overlay">
+                    <div className="project-notice-card">
+                        <div className="project-notice-hero">
+                            <span className="project-notice-pill">Aviso del proyecto</span>
+                            <h2 className="project-notice-title">Proyecto personal en pruebas</h2>
+                            <p className="project-notice-subtitle">Este mensaje no es de cookies.</p>
+                        </div>
+
+                        <p className="text-sm text-gray-200 leading-6 m-0">
+                            Esta web es un proyecto personal, sin fines comerciales. Algunas partes pueden fallar o no
+                            comportarse como esperas durante pruebas y mejoras.
+                        </p>
+                        <p className="mt-3 text-sm text-gray-200 leading-6 m-0">
+                            Si te encuentras cualquier problema, por favor contacta con el administrador desde las redes
+                            o correo que aparecen en esta pantalla.
+                        </p>
+
+                        <button
+                            type="button"
+                            onClick={handleAcceptProjectNotice}
+                            className="mt-5 w-full rounded-md border border-[#ff4200] bg-[#ff4200]/15 px-4 py-2 text-[#ff4200] font-semibold hover:bg-[#ff4200] hover:text-white transition-colors"
+                        >
+                            Entendido, continuar
+                        </button>
+                    </div>
+                </div>
+            )}
+
             <div className='leftLogin'>
                 <div className="flex h-screen w-full items-center justify-center bg-black/50 backdrop-blur-sm md:bg-transparent md:backdrop-blur-none">
                     <div className="loginRequest w-full max-w-sm p-5 md:p-0 flex flex-col items-center">
@@ -250,6 +296,12 @@ export default function Login({ defaultTestMode = false }: LoginProps) {
                                     Crear una cuenta nueva
                                 </Link>
                             </div>
+
+                            <div className="mt-3 rounded-md border border-gray-700 bg-black/20 p-3">
+                                <p className="mb-2 text-xs text-gray-300">Redes del administrador</p>
+                                <SocialLinks size="small" compact className="items-center" />
+                            </div>
+
                             <div className='mt-5'>
                                 <CustomLaddaButton
                                     label="Iniciar Sesión"

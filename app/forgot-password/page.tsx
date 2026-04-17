@@ -1,4 +1,5 @@
 import Link from "next/link";
+import SocialLinks from "@/shared/social/SocialLinks";
 
 export default function ForgotPasswordPage() {
   return (
@@ -12,24 +13,7 @@ export default function ForgotPasswordPage() {
 
         <div className="mb-6 rounded-md border border-gray-700 bg-black/20 p-3">
           <p className="text-xs text-gray-300 mb-2">Enlaces útiles:</p>
-          <div className="flex flex-col gap-2 text-sm">
-            
-            <a
-              href="https://www.linkedin.com/in/cesar-sobrino-arribas-1b887021b/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[#ff4200] underline hover:text-[#ff7a4d] transition-colors"
-            >
-              LinkedIn del administrador
-            </a>
-            <a
-              href="mailto:cesarsobworkspace@gmail.com"
-              className="text-[#ff4200] underline hover:text-[#ff7a4d] transition-colors"
-            >
-              Correo: cesarsobworkspace@gmail.com
-            </a>
-         
-          </div>
+          <SocialLinks />
         </div>
 
         <div className="flex gap-3 flex-wrap">

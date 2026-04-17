@@ -6,6 +6,7 @@ import AuthGuard from './AuthGuard';
 import { PrimeReactProvider } from 'primereact/api';
 import Navbar from '@/shared/navbar/Navbar'; // Import Navbar
 import { usePathname } from 'next/navigation';
+import FloatingSocialMenu from '@/shared/social/FloatingSocialMenu';
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -50,6 +51,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
                 <AuthGuard>
                     {!hideNavbar && <Navbar />}
                     {children}
+                    <FloatingSocialMenu />
                 </AuthGuard>
             </AuthProvider>
         </PrimeReactProvider>
